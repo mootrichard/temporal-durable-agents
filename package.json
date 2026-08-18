@@ -1,0 +1,49 @@
+{
+  "name": "durable-agent-tree-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "npm run build:server && npm run build:ui",
+    "build:server": "tsc -p tsconfig.server.json",
+    "build:ui": "vite build",
+    "check": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.ui.json --noEmit",
+    "dev": "concurrently -k \"npm:dev:api\" \"npm:dev:ui\"",
+    "dev:api": "tsx watch src/server/main.ts",
+    "dev:ui": "vite",
+    "fixture:test": "npm test --prefix fixture",
+    "preflight": "tsx scripts/preflight.ts",
+    "start": "node dist/server/src/server/main.js",
+    "temporal:up": "docker compose up -d temporal",
+    "temporal:down": "docker compose down",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@openai/codex-sdk": "0.147.0",
+    "@temporalio/activity": "1.22.0",
+    "@temporalio/client": "1.22.0",
+    "@temporalio/common": "1.22.0",
+    "@temporalio/worker": "1.22.0",
+    "@temporalio/workflow": "1.22.0",
+    "express": "5.1.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "zod": "4.1.12"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "@temporalio/testing": "^1.22.0",
+    "@types/express": "5.0.5",
+    "@types/node": "24.10.1",
+    "@types/react": "19.2.5",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.1.1",
+    "concurrently": "9.2.4",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vite": "7.3.6",
+    "vitest": "4.1.10"
+  }
+}
