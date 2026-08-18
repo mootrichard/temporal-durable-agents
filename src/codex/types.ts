@@ -17,7 +17,7 @@ export type CodexRunRequest = {
 
 export type CodexCheckpoint = {
   threadId: string;
-  attempt: number;
+  threadTurnNumber: number;
   lastItemId?: string;
 };
 

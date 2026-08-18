@@ -14,6 +14,9 @@ const worker = await Worker.create({
   taskQueue: temporalTaskQueue(runId),
   workflowsPath: fileURLToPath(new URL('./workflows.ts', import.meta.url)),
   activities: createActivities(),
+  maxCachedWorkflows: 0,
+  maxHeartbeatThrottleInterval: '500 milliseconds',
+  defaultHeartbeatThrottleInterval: '500 milliseconds',
 });
 
 await worker.run();

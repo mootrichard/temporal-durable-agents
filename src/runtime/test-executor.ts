@@ -57,7 +57,11 @@ export async function runFixtureTests(
   const result = await runCheckpointedTests(
     [...fixtureTestFiles],
     previouslyCompleted,
-    (filename) => executeFixtureTestFile(workspace, filename),
+    async (filename) => {
+      const delayMs = Number.parseInt(process.env.TEST_FILE_DELAY_MS ?? '0', 10);
+      if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
+      return executeFixtureTestFile(workspace, filename);
+    },
     onProgress,
   );
   const outputs = Object.entries(result.results).map(

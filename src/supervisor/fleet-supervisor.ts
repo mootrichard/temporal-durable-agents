@@ -69,6 +69,7 @@ export class FleetSupervisor {
       } catch (error) {
         if (!isQueryTemporarilyUnavailable(error)) throw error;
       }
+      await this.refreshTemporalTestCheckpoint(managed);
     }
     return structuredClone(managed.snapshot);
   }
@@ -76,6 +77,10 @@ export class FleetSupervisor {
   async kill(runId: string): Promise<RunSnapshot> {
     const managed = this.requireRun(runId);
     if (!managed.target) throw new Error('The Worker fleet is already offline');
+    if (managed.mode === 'temporal') {
+      await this.snapshot(runId);
+      await this.refreshTemporalTestCheckpoint(managed);
+    }
     managed.expectedExit = true;
     terminateProcessGroup(managed.target, this.ownerToken, 'SIGKILL');
     managed.process = undefined;
@@ -205,6 +210,45 @@ export class FleetSupervisor {
       this.temporalClient = new Client({ connection: this.temporalConnection });
     }
     return this.temporalClient;
+  }
+
+  private async refreshTemporalTestCheckpoint(managed: ManagedRun): Promise<void> {
+    try {
+      const client = await this.getTemporalClient();
+      const description = await client.workflow.getHandle(managed.runId).describe();
+      for (const pending of description.raw.pendingActivities ?? []) {
+        if (pending.activityType?.name !== 'runTests') continue;
+        const completedFiles = decodeHeartbeatStringArray(pending.heartbeatDetails);
+        if (!completedFiles) continue;
+        managed.snapshot = {
+          ...managed.snapshot,
+          metrics: {
+            ...managed.snapshot.metrics,
+            completedTests: Math.max(
+              managed.snapshot.metrics.completedTests,
+              completedFiles.length,
+            ),
+          },
+        };
+      }
+    } catch (error) {
+      if (!isQueryTemporarilyUnavailable(error)) throw error;
+    }
+  }
+}
+
+export function decodeHeartbeatStringArray(value: {
+  payloads?: Array<{ data?: Uint8Array | null } | null> | null;
+} | null | undefined): string[] | undefined {
+  const bytes = value?.payloads?.[0]?.data;
+  if (!bytes) return undefined;
+  try {
+    const decoded: unknown = JSON.parse(new TextDecoder().decode(bytes));
+    return Array.isArray(decoded) && decoded.every((entry) => typeof entry === 'string')
+      ? decoded
+      : undefined;
+  } catch {
+    return undefined;
   }
 }
 

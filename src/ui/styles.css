@@ -65,7 +65,7 @@ h1 em { color: var(--temporal); font-style: normal; }
 .action-mark { margin-right: 9px; font-family: monospace; }
 .request-error { padding: 9px 14px; color: #8d2d20; background: #ffe8e3; border-bottom: 1px solid #f4b8ac; font-size: 13px; }
 
-.stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(285px, 25vw); gap: 28px; height: calc(100vh - 278px); min-height: 490px; margin-top: 20px; }
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(285px, 25vw); gap: 28px; height: calc(100vh - 318px); min-height: 490px; margin-top: 20px; }
 .tree-panel { position: relative; min-width: 0; border: 1px solid var(--line); background: rgba(247,248,252,.82); box-shadow: 0 18px 50px rgba(51,63,91,.09); }
 .fleet-state { height: 40px; display: flex; align-items: center; padding: 0 16px; gap: 9px; border-bottom: 1px solid var(--line); font: 700 10px/1 monospace; letter-spacing: .08em; text-transform: uppercase; }
 .fleet-state strong { margin-left: auto; color: var(--signal); }

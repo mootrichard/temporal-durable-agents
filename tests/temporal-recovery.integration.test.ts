@@ -8,9 +8,10 @@ import { Worker } from '@temporalio/worker';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 
 import { FixtureCodexRunner } from '../src/codex/fixture-runner.js';
-import type { CodexRole } from '../src/codex/types.js';
+import type { CodexRole, CodexRunner } from '../src/codex/types.js';
 import { executeFixtureTestFile, runFixtureTests } from '../src/runtime/test-executor.js';
 import { createRunWorkspace, fixtureTestFiles, getWorkspaceDiff } from '../src/runtime/workspace.js';
+import { createActivities } from '../src/temporal/activities.js';
 import type { CodexActivityInput, CodexActivityResult } from '../src/temporal/contracts.js';
 import { FixWorkflow } from '../src/temporal/workflows.js';
 
@@ -41,19 +42,30 @@ it('reuses a completed child and retries only interrupted work on a replacement 
   let interruptedStarted!: () => void;
   const sourceDone = new Promise<void>((resolve) => { sourceFinished = resolve; });
   const interruptionReady = new Promise<void>((resolve) => { interruptedStarted = resolve; });
-
-  const firstActivities = activitySet(async (input) => {
-    calls[input.role] += 1;
-    if (input.role === 'test-investigator') {
-      Context.current().heartbeat({ threadId: 'fixture-test-investigator' });
-      interruptedStarted();
-      await Context.current().cancelled;
-      throw new Error('The cancelled Activity unexpectedly continued');
-    }
-    const result = await successfulCodex(input);
-    if (input.role === 'source-investigator') sourceFinished();
-    return result;
-  });
+  const resumedThreadIds: string[] = [];
+  const recoveryRunner: CodexRunner = {
+    async run(input, hooks = {}) {
+      calls[input.role] += 1;
+      if (input.role === 'test-investigator' && !input.threadId) {
+        hooks.onCheckpoint?.({
+          threadId: 'fixture-test-investigator',
+          threadTurnNumber: 1,
+        });
+        interruptedStarted();
+        await Context.current().cancelled;
+        throw new Error('The cancelled Activity unexpectedly continued');
+      }
+      if (input.role === 'test-investigator' && input.threadId) {
+        resumedThreadIds.push(input.threadId);
+      }
+      const result = await new FixtureCodexRunner({ delayMs: 0 }).run(input, hooks);
+      if (input.role === 'source-investigator') sourceFinished();
+      return result;
+    },
+  };
+  const supportActivities = activitySet(successfulCodex);
+  const durableCodexActivity = createActivities({ createRunner: () => recoveryRunner }).runCodexTurn;
+  const firstActivities = { ...supportActivities, runCodexTurn: durableCodexActivity };
 
   const workerOne = await Worker.create({
     connection: environment.nativeConnection,
@@ -77,10 +89,7 @@ it('reuses a completed child and retries only interrupted work on a replacement 
     connection: environment.nativeConnection,
     taskQueue,
     workflowsPath: new URL('../src/temporal/workflows.ts', import.meta.url).pathname,
-    activities: activitySet(async (input) => {
-      calls[input.role] += 1;
-      return successfulCodex(input);
-    }),
+    activities: { ...supportActivities, runCodexTurn: durableCodexActivity },
   });
 
   const result = await workerTwo.runUntil(handle.result());
@@ -88,6 +97,7 @@ it('reuses a completed child and retries only interrupted work on a replacement 
   expect(result.diff).toContain('attempt < maxAttempts');
   expect(calls['source-investigator']).toBe(1);
   expect(calls['test-investigator']).toBe(2);
+  expect(resumedThreadIds).toEqual(['fixture-test-investigator']);
   expect(result.metrics.retriedCodexTurns).toBeGreaterThanOrEqual(1);
 }, 120_000);
 

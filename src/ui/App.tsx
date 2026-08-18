@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { createInitialSnapshot, type DemoMode, type RunnerMode, type RunSnapshot } from '../shared/run-snapshot.js';
 
@@ -10,7 +10,9 @@ export function App() {
   const [snapshots, setSnapshots] = useState<Snapshots>({});
   const [busy, setBusy] = useState(false);
   const [requestError, setRequestError] = useState<string>();
+  const actionInFlight = useRef(false);
   const snapshot = snapshots[mode] ?? createInitialSnapshot('preview', mode, runnerMode);
+  const runFinished = snapshot.phase === 'complete' || snapshot.phase === 'failed';
 
   useEffect(() => {
     if (!snapshot.runId || snapshot.runId === 'preview' || snapshot.frozen) return;
@@ -28,7 +30,13 @@ export function App() {
 
   const act = mode === 'baseline' ? 'ACT I' : 'ACT II';
   const ownership = mode === 'baseline' ? 'PROCESS MEMORY OWNS THE RUN' : 'EVENT HISTORY OWNS THE RUN';
-  const actionLabel = snapshot.runId === 'preview' ? 'Start run' : snapshot.frozen ? 'Restart workers' : 'Kill all workers';
+  const actionLabel = snapshot.runId === 'preview'
+    ? 'Start run'
+    : runFinished
+      ? 'Start new run'
+      : snapshot.frozen
+        ? 'Restart workers'
+        : 'Kill all workers';
 
   async function start(): Promise<void> {
     await perform(async () => {
@@ -41,7 +49,7 @@ export function App() {
   }
 
   async function actOnFleet(): Promise<void> {
-    if (snapshot.runId === 'preview') return start();
+    if (snapshot.runId === 'preview' || runFinished) return start();
     const operation = snapshot.frozen ? 'restart' : 'kill';
     await perform(async () => {
       const changed = await api<RunSnapshot>(`/api/runs/${snapshot.runId}/${operation}`, {
@@ -52,6 +60,8 @@ export function App() {
   }
 
   async function perform(action: () => Promise<void>): Promise<void> {
+    if (actionInFlight.current) return;
+    actionInFlight.current = true;
     setBusy(true);
     setRequestError(undefined);
     try {
@@ -59,6 +69,7 @@ export function App() {
     } catch (error) {
       setRequestError(errorMessage(error));
     } finally {
+      actionInFlight.current = false;
       setBusy(false);
     }
   }
@@ -94,11 +105,11 @@ export function App() {
         <button
           data-testid="fleet-action"
           className={`fleet-action ${snapshot.frozen ? 'restart' : ''}`}
-          disabled={busy || snapshot.phase === 'complete'}
+          disabled={busy}
           onClick={actOnFleet}
           type="button"
         >
-          <span className="action-mark" aria-hidden="true">{snapshot.frozen ? '↻' : snapshot.runId === 'preview' ? '▶' : '■'}</span>
+          <span className="action-mark" aria-hidden="true">{snapshot.frozen ? '↻' : snapshot.runId === 'preview' || runFinished ? '▶' : '■'}</span>
           {busy ? 'Working…' : actionLabel}
         </button>
       </section>
@@ -179,12 +190,12 @@ function EvidenceRail({ snapshot }: { snapshot: RunSnapshot }) {
       </div>
 
       <div className="metric-pair">
-        <div><strong>{snapshot.metrics.completedCodexTurns}</strong><span>Codex turns<br />recorded</span></div>
+        <div><strong data-testid="completed-turns">{snapshot.metrics.completedCodexTurns}</strong><span>Codex turns<br />recorded</span></div>
         <div><strong>{snapshot.metrics.retriedCodexTurns}</strong><span>turns<br />retried</span></div>
       </div>
 
       <div className="test-progress">
-        <div><span>Test checkpoint</span><b>{snapshot.metrics.completedTests} / {snapshot.metrics.totalTests}</b></div>
+        <div><span>Test checkpoint</span><b data-testid="test-progress">{snapshot.metrics.completedTests} / {snapshot.metrics.totalTests}</b></div>
         <div className="progress-track"><i style={{ width: `${progress}%` }} /></div>
         <small>{snapshot.mode === 'temporal' ? 'Passed files are heartbeat checkpoints.' : 'Progress lives inside the process.'}</small>
       </div>

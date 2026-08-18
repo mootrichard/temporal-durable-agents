@@ -91,7 +91,7 @@ export class BaselineOrchestrator {
         id: 'coordinator',
         status: 'running',
         detail: 'Applying the minimal fix from both investigations',
-        attempt: 2,
+        attempt: 1,
       });
       const implementation = await this.codex.run(
         {
@@ -106,13 +106,12 @@ export class BaselineOrchestrator {
           threadId: planTurn.threadId,
         },
         {
-          onCheckpoint: ({ threadId, attempt }) =>
+          onCheckpoint: ({ threadId }) =>
             emit({
               type: 'node',
               id: 'coordinator',
               status: 'running',
               threadId,
-              attempt,
             }),
         },
       );
@@ -153,8 +152,8 @@ export class BaselineOrchestrator {
         sandboxMode: 'read-only',
       },
       {
-        onCheckpoint: ({ threadId, attempt }) =>
-          emit({ type: 'node', id: nodeId, status: 'running', threadId, attempt }),
+        onCheckpoint: ({ threadId }) =>
+          emit({ type: 'node', id: nodeId, status: 'running', threadId }),
       },
     );
     recordCodexCompletion(emit, result);

@@ -11,6 +11,7 @@
     "dev": "concurrently -k \"npm:dev:api\" \"npm:dev:ui\"",
     "dev:api": "tsx watch src/server/main.ts",
     "dev:ui": "vite",
+    "e2e:server": "tsx scripts/e2e-server.ts",
     "fixture:test": "npm test --prefix fixture",
     "preflight": "tsx scripts/preflight.ts",
     "start": "node dist/server/src/server/main.js",
@@ -18,7 +19,7 @@
     "temporal:down": "docker compose down",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test --config playwright.config.ts"
   },
   "dependencies": {
     "@openai/codex-sdk": "0.147.0",

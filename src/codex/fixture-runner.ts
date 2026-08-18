@@ -46,7 +46,7 @@ export class FixtureCodexRunner implements CodexRunner {
 
   async run(request: CodexRunRequest, hooks: CodexRunHooks = {}): Promise<CodexRunResult> {
     const threadId = request.threadId ?? `fixture-${request.role}`;
-    hooks.onCheckpoint?.({ threadId, attempt: request.threadId ? 2 : 1 });
+    hooks.onCheckpoint?.({ threadId, threadTurnNumber: request.threadId ? 2 : 1 });
     hooks.onProgress?.({ type: 'thread', message: `${request.role} started` });
     await delay(this.delayMs);
 

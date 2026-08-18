@@ -44,12 +44,18 @@ export class LiveCodexRunner implements CodexRunner {
 
       if (event.type === 'thread.started') {
         threadId = event.thread_id;
-        hooks.onCheckpoint?.({ threadId, attempt: resumed ? 2 : 1 });
+        hooks.onCheckpoint?.({ threadId, threadTurnNumber: resumed ? 2 : 1 });
       }
       if (event.type === 'item.completed') {
         lastItemId = event.item.id;
         if (event.item.type === 'agent_message') finalResponse = event.item.text;
-        if (threadId) hooks.onCheckpoint?.({ threadId, attempt: resumed ? 2 : 1, lastItemId });
+        if (threadId) {
+          hooks.onCheckpoint?.({
+            threadId,
+            threadTurnNumber: resumed ? 2 : 1,
+            lastItemId,
+          });
+        }
       }
       if (event.type === 'turn.completed') {
         inputTokens = event.usage.input_tokens;

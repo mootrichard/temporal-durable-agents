@@ -12,6 +12,7 @@ Requirements: Node 24+, npm, Docker, the `codex` CLI, and a local Codex login.
 
 ```bash
 npm install
+npx playwright install chromium
 npm run temporal:up
 npm run preflight
 npm run build
@@ -80,10 +81,11 @@ Stable domain types live in `src/shared/` and `src/temporal/contracts.ts`: `Dele
 
 ```bash
 npm test
+npm run test:e2e
 npm run check
 npm run build
 ```
 
-The integration suite launches a real ephemeral Temporal server, completes one Child Workflow, interrupts another Activity, replaces the Worker, and proves the completed child ran once while unfinished work retried. Browser receipts are saved under `output/playwright/`.
+The integration suite launches a real ephemeral Temporal server, completes one Child Workflow, interrupts another Activity, replaces the Worker, and proves the completed child ran once while unfinished work retried. The Playwright suite launches the API with its own Temporal server and automates both acts, including the supervisor’s real kill/restart endpoints. Browser receipts are saved under `output/playwright/`.
 
-See [Architecture and state ownership](docs/architecture.md) and [Talk track and exact demo script](docs/talk-track.md).
+See [Architecture and state ownership](docs/architecture.md), [Talk track and exact demo script](docs/talk-track.md), and [Verification receipts](docs/verification.md).
