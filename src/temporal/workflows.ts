@@ -58,7 +58,7 @@ export async function FixWorkflow(input: FixWorkflowInput): Promise<TemporalWork
       runnerMode: input.runnerMode,
       outputSchema: delegationPlanJsonSchema,
     });
-    recordCodex(snapshot, emit, planTurn.activityAttempt, planTurn.usage);
+    recordCodex(emit, planTurn, 'coordinator');
     emit({
       type: 'node',
       id: 'coordinator',
@@ -71,30 +71,46 @@ export async function FixWorkflow(input: FixWorkflowInput): Promise<TemporalWork
     const tests = assignmentFor(plan.assignments, 'tests');
 
     emit({ type: 'phase', phase: 'investigating' });
+    emit({
+      type: 'node',
+      id: 'coordinator',
+      status: 'waiting',
+      detail: 'Delegation plan ready. Waiting for investigations and reproduction.',
+    });
     markInvestigationStarted(emit, source);
     markInvestigationStarted(emit, tests);
     emit({ type: 'node', id: 'test-job', status: 'running', detail: 'Reproducing the bug', attempt: 1 });
 
-    const [sourceResult, testResult, initialTests] = await Promise.all([
-      executeChild(SubagentWorkflow, {
-        workflowId: `${input.runId}-source-investigator`,
-        args: [{ ...input, assignment: source }],
-        parentClosePolicy: ParentClosePolicy.REQUEST_CANCEL,
-      }),
-      executeChild(SubagentWorkflow, {
-        workflowId: `${input.runId}-test-investigator`,
-        args: [{ ...input, assignment: tests }],
-        parentClosePolicy: ParentClosePolicy.REQUEST_CANCEL,
-      }),
-      activities.runTests({ workspace: input.workspace, phase: 'initial' }),
-    ]);
+    const sourcePromise = executeChild(SubagentWorkflow, {
+      workflowId: `${input.runId}-source-investigator`,
+      args: [{ ...input, assignment: source }],
+      parentClosePolicy: ParentClosePolicy.REQUEST_CANCEL,
+    }).then((result) => {
+      completeInvestigation(emit, result);
+      recordCodex(emit, result.codex, nodeFor(result.assignment));
+      return result;
+    });
+    const testPromise = executeChild(SubagentWorkflow, {
+      workflowId: `${input.runId}-test-investigator`,
+      args: [{ ...input, assignment: tests }],
+      parentClosePolicy: ParentClosePolicy.REQUEST_CANCEL,
+    }).then((result) => {
+      completeInvestigation(emit, result);
+      recordCodex(emit, result.codex, nodeFor(result.assignment));
+      return result;
+    });
+    const initialTestsPromise = activities.runTests({ workspace: input.workspace, phase: 'initial' })
+      .then((result) => {
+        emit({ type: 'test-progress', completed: result.completed, total: result.total });
+        emit({ type: 'node', id: 'test-job', status: 'complete', detail: 'Bug reproduced' });
+        return result;
+      });
 
-    completeInvestigation(emit, sourceResult);
-    completeInvestigation(emit, testResult);
-    recordCodex(snapshot, emit, sourceResult.codex.activityAttempt, sourceResult.codex.usage);
-    recordCodex(snapshot, emit, testResult.codex.activityAttempt, testResult.codex.usage);
-    emit({ type: 'test-progress', completed: initialTests.completed, total: initialTests.total });
-    emit({ type: 'node', id: 'test-job', status: 'complete', detail: 'Bug reproduced' });
+    const [sourceResult, testResult, initialTests] = await Promise.all([
+      sourcePromise,
+      testPromise,
+      initialTestsPromise,
+    ]);
 
     emit({ type: 'phase', phase: 'implementing' });
     emit({ type: 'node', id: 'coordinator', status: 'running', detail: 'Applying the minimal fix' });
@@ -113,7 +129,7 @@ export async function FixWorkflow(input: FixWorkflowInput): Promise<TemporalWork
       runnerMode: input.runnerMode,
       threadId: planTurn.threadId,
     });
-    recordCodex(snapshot, emit, implementation.activityAttempt, implementation.usage);
+    recordCodex(emit, implementation, 'coordinator');
     emit({
       type: 'node',
       id: 'coordinator',
@@ -194,11 +210,22 @@ function assignmentFor(
 }
 
 function recordCodex(
-  _snapshot: RunSnapshot,
   emit: (event: RunEvent) => RunSnapshot,
-  attempt: number,
-  usage: { inputTokens: number; outputTokens: number },
+  result: import('./contracts.js').CodexActivityResult,
+  nodeId: RunNode['id'],
 ): void {
-  for (let retry = 1; retry < attempt; retry += 1) emit({ type: 'codex-retry' });
-  emit({ type: 'codex-complete', ...usage });
+  for (const progress of result.trace) {
+    emit({
+      type: 'trace',
+      entry: {
+        id: `${nodeId}-${progress.id}`,
+        nodeId,
+        kind: progress.type === 'item' ? 'tool' : progress.type,
+        status: progress.status,
+        message: progress.message,
+      },
+    });
+  }
+  for (let retry = 1; retry < result.activityAttempt; retry += 1) emit({ type: 'codex-retry' });
+  emit({ type: 'codex-complete', ...result.usage });
 }

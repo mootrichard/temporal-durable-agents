@@ -48,6 +48,7 @@ Key implementation: `src/baseline/orchestrator.ts` and `src/baseline/process.ts`
 `FixWorkflow` records the plan and creates one `SubagentWorkflow` per bounded investigation. Codex work and tests stay in Activities because they perform nondeterministic external work.
 
 - `runCodexTurn` heartbeats the Codex thread ID as soon as the SDK emits `thread.started`.
+- A five-second heartbeat lease keeps quiet Codex turns live under the 20-second heartbeat timeout.
 - An Activity retry uses heartbeat details to resume the local Codex thread.
 - If that local session has disappeared, the Activity starts a replacement from the durable prompt and current Git worktree.
 - `runTests` runs one file at a time and heartbeats the passed filenames. A retry skips those files.
@@ -88,4 +89,4 @@ npm run build
 
 The integration suite launches a real ephemeral Temporal server, completes one Child Workflow, interrupts another Activity, replaces the Worker, and proves the completed child ran once while unfinished work retried. The Playwright suite launches the API with its own Temporal server and automates both acts, including the supervisor’s real kill/restart endpoints. Browser receipts are saved under `output/playwright/`.
 
-See [Architecture and state ownership](docs/architecture.md), [Talk track and exact demo script](docs/talk-track.md), and [Verification receipts](docs/verification.md).
+See [How the durable agent tree works](docs/how-it-works.md), [Architecture and state ownership](docs/architecture.md), [Talk track and exact demo script](docs/talk-track.md), and [Verification receipts](docs/verification.md).

@@ -40,15 +40,34 @@ export function createActivities(dependencies: ActivityDependencies = {}) {
         request: CodexActivityInput,
         replaced: boolean,
       ): Promise<CodexActivityResult> {
-        const result = await codex.run(request, {
-          onCheckpoint: ({ threadId, lastItemId }) => {
-            context.heartbeat({ threadId, lastItemId } satisfies CodexHeartbeat);
-          },
-        });
+        let heartbeat: CodexHeartbeat = {
+          ...checkpoint,
+          ...(request.threadId ? { threadId: request.threadId } : {}),
+          role: request.role,
+        };
+        const trace: NonNullable<CodexActivityResult['trace']> = [];
+        const result = await withHeartbeatLease(
+          () => context.heartbeat(heartbeat),
+          () => codex.run(
+            { ...request, signal: context.cancellationSignal },
+            {
+              onCheckpoint: ({ threadId, lastItemId }) => {
+                heartbeat = { ...heartbeat, threadId, lastItemId };
+                context.heartbeat(heartbeat);
+              },
+              onProgress: (progress) => {
+                trace.push(progress);
+                heartbeat = { ...heartbeat, progress };
+                context.heartbeat(heartbeat);
+              },
+            },
+          ),
+        );
         return {
           ...result,
           replacementThread: replaced,
           activityAttempt: context.info.attempt,
+          trace: trace.slice(-24),
         };
       }
     },
@@ -75,21 +94,24 @@ export function createActivities(dependencies: ActivityDependencies = {}) {
   };
 }
 
-function asCodexHeartbeat(value: unknown): CodexHeartbeat | undefined {
-  if (
-    typeof value === 'object' &&
-    value !== null &&
-    'threadId' in value &&
-    typeof value.threadId === 'string'
-  ) {
-    return {
-      threadId: value.threadId,
-      ...('lastItemId' in value && typeof value.lastItemId === 'string'
-        ? { lastItemId: value.lastItemId }
-        : {}),
-    };
+export async function withHeartbeatLease<T>(
+  heartbeat: () => void,
+  task: () => Promise<T>,
+  intervalMs = 5_000,
+): Promise<T> {
+  heartbeat();
+  const timer = setInterval(heartbeat, intervalMs);
+  try {
+    return await task();
+  } finally {
+    clearInterval(timer);
   }
-  return undefined;
+}
+
+function asCodexHeartbeat(value: unknown): CodexHeartbeat | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  if ('threadId' in value && value.threadId !== undefined && typeof value.threadId !== 'string') return undefined;
+  return value as CodexHeartbeat;
 }
 
 function asCompletedFiles(value: unknown): string[] {

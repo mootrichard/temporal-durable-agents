@@ -1,4 +1,4 @@
-import type { CodexRole, CodexSandboxMode } from '../codex/types.js';
+import type { CodexProgressEvent, CodexRole, CodexSandboxMode } from '../codex/types.js';
 import type { SubagentAssignment } from '../shared/delegation-plan.js';
 import type { RunnerMode, RunSnapshot } from '../shared/run-snapshot.js';
 
@@ -28,12 +28,15 @@ export type CodexActivityResult = {
   resumed: boolean;
   replacementThread: boolean;
   activityAttempt: number;
+  trace: CodexProgressEvent[];
   usage: { inputTokens: number; outputTokens: number };
 };
 
 export type CodexHeartbeat = {
-  threadId: string;
+  threadId?: string;
   lastItemId?: string;
+  role?: CodexRole;
+  progress?: CodexProgressEvent;
 };
 
 export type SubagentWorkflowInput = {

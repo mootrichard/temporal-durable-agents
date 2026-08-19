@@ -13,6 +13,7 @@ export type CodexRunRequest = {
   sandboxMode: CodexSandboxMode;
   threadId?: string;
   outputSchema?: unknown;
+  signal?: AbortSignal;
 };
 
 export type CodexCheckpoint = {
@@ -22,7 +23,9 @@ export type CodexCheckpoint = {
 };
 
 export type CodexProgressEvent = {
+  id: string;
   type: 'thread' | 'item' | 'message';
+  status: 'running' | 'complete' | 'failed';
   message: string;
 };
 

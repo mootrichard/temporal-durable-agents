@@ -10,6 +10,7 @@ import {
   getWorkspaceDiff,
 } from '../src/runtime/workspace.js';
 import { parseDelegationPlan } from '../src/shared/delegation-plan.js';
+import { plannerPrompt } from '../src/codex/prompts.js';
 
 const temporaryDirectories: string[] = [];
 
@@ -22,6 +23,11 @@ afterEach(async () => {
 });
 
 describe('FixtureCodexRunner', () => {
+  it('keeps repository inspection out of the coordinator planning turn', () => {
+    expect(plannerPrompt).toContain('Do not inspect files, run commands, or use tools');
+    expect(plannerPrompt).toContain('delegated investigators own that work');
+  });
+
   it('returns the same valid two-agent delegation plan on every run', async () => {
     const runner = new FixtureCodexRunner({ delayMs: 0 });
     const result = await runner.run({

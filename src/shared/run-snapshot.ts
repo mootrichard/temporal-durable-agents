@@ -35,6 +35,14 @@ export type RunMetrics = {
   outputTokens: number;
 };
 
+export type RunTraceEntry = {
+  id: string;
+  nodeId: RunNode['id'] | 'system';
+  kind: 'status' | 'thread' | 'reasoning' | 'tool' | 'message' | 'error';
+  status: 'running' | 'complete' | 'failed';
+  message: string;
+};
+
 export type RunSnapshot = {
   runId: string;
   mode: DemoMode;
@@ -44,6 +52,7 @@ export type RunSnapshot = {
   frozen: boolean;
   sequence: number;
   nodes: RunNode[];
+  trace: RunTraceEntry[];
   metrics: RunMetrics;
   summary?: string;
   diff?: string;
@@ -64,6 +73,7 @@ export type RunEvent =
   | { type: 'codex-retry' }
   | { type: 'codex-complete'; inputTokens: number; outputTokens: number }
   | { type: 'test-progress'; completed: number; total: number }
+  | { type: 'trace'; entry: RunTraceEntry }
   | { type: 'complete'; summary: string; diff: string }
   | { type: 'failed'; error: string }
   | { type: 'interrupted'; error: string };
@@ -111,6 +121,7 @@ export function createInitialSnapshot(
         attempt: 0,
       },
     ],
+    trace: [],
     metrics: {
       completedCodexTurns: 0,
       retriedCodexTurns: 0,
@@ -160,6 +171,13 @@ export function applyRunEvent(snapshot: RunSnapshot, event: RunEvent): RunSnapsh
       next.metrics.completedTests = event.completed;
       next.metrics.totalTests = event.total;
       break;
+    case 'trace': {
+      const existing = next.trace.findIndex(({ id }) => id === event.entry.id);
+      next.trace = existing === -1
+        ? [...next.trace, event.entry].slice(-24)
+        : next.trace.map((entry, index) => index === existing ? event.entry : entry);
+      break;
+    }
     case 'complete':
       next.phase = 'complete';
       next.summary = event.summary;
@@ -168,6 +186,9 @@ export function applyRunEvent(snapshot: RunSnapshot, event: RunEvent): RunSnapsh
     case 'failed':
       next.phase = 'failed';
       next.error = event.error;
+      next.nodes = next.nodes.map((node) =>
+        node.status === 'complete' ? node : { ...node, status: 'failed' },
+      );
       break;
     case 'interrupted':
       next.phase = 'interrupted';

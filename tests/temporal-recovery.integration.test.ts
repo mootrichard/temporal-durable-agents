@@ -82,6 +82,15 @@ it('reuses a completed child and retries only interrupted work on a replacement 
   });
 
   await Promise.all([sourceDone, interruptionReady]);
+  const inFlight = await waitForSnapshot(
+    handle,
+    (snapshot) =>
+      snapshot.nodes.find(({ id }) => id === 'source-investigator')?.status === 'complete'
+      && snapshot.nodes.find(({ id }) => id === 'test-investigator')?.status === 'running',
+  );
+  expect(inFlight.nodes.find(({ id }) => id === 'source-investigator')?.status).toBe('complete');
+  expect(inFlight.nodes.find(({ id }) => id === 'test-investigator')?.status).toBe('running');
+  expect(inFlight.nodes.find(({ id }) => id === 'coordinator')?.status).toBe('waiting');
   workerOne.shutdown();
   await workerOneRun;
 
@@ -228,5 +237,20 @@ async function successfulCodex(input: CodexActivityInput): Promise<CodexActivity
     ...result,
     replacementThread: false,
     activityAttempt: context.info.attempt,
+    trace: [],
   };
+}
+
+async function waitForSnapshot(
+  handle: { query<T>(query: string): Promise<T> },
+  predicate: (snapshot: import('../src/shared/run-snapshot.js').RunSnapshot) => boolean,
+): Promise<import('../src/shared/run-snapshot.js').RunSnapshot> {
+  const deadline = Date.now() + 3_000;
+  let snapshot!: import('../src/shared/run-snapshot.js').RunSnapshot;
+  while (Date.now() < deadline) {
+    snapshot = await handle.query('snapshot');
+    if (predicate(snapshot)) return snapshot;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return snapshot;
 }

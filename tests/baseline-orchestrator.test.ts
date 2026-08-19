@@ -43,3 +43,27 @@ it('implements the fixture fix through the baseline public run interface', async
   expect(snapshots).toContain('investigating');
   expect(snapshots).toContain('testing');
 });
+
+it('publishes Codex progress while the planning turn is still running', async () => {
+  const baseDirectory = await mkdtemp(path.join(tmpdir(), 'baseline-agent-tree-'));
+  temporaryDirectories.push(baseDirectory);
+  const workspace = await createRunWorkspace('baseline-progress', { baseDirectory });
+  const snapshots: import('../src/shared/run-snapshot.js').RunSnapshot[] = [];
+  const orchestrator = new BaselineOrchestrator({
+    codex: new FixtureCodexRunner({ delayMs: 0 }),
+  });
+
+  await orchestrator.run(
+    { runId: 'baseline-progress', runnerMode: 'fixture', workspace },
+    (snapshot) => snapshots.push(snapshot),
+  );
+
+  expect(
+    snapshots.some((snapshot) =>
+      snapshot.nodes.find(({ id }) => id === 'coordinator')?.detail === 'planner started'),
+  ).toBe(true);
+  expect(
+    snapshots.flatMap((snapshot) => snapshot.trace ?? []).some(({ message }) =>
+      message.includes('planner started')),
+  ).toBe(true);
+});

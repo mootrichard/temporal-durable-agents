@@ -1,4 +1,4 @@
-import type { CodexRunResult, CodexRunner } from '../codex/types.js';
+import type { CodexProgressEvent, CodexRunResult, CodexRunner } from '../codex/types.js';
 import {
   implementationPrompt,
   investigationPrompt,
@@ -70,6 +70,7 @@ export class BaselineOrchestrator {
         {
           onCheckpoint: ({ threadId }) =>
             emit({ type: 'node', id: 'coordinator', status: 'running', threadId }),
+          onProgress: progressReporter('coordinator', emit),
         },
       );
       recordCodexCompletion(emit, planTurn);
@@ -79,6 +80,12 @@ export class BaselineOrchestrator {
       const sourceAssignment = assignmentFor(plan.assignments, 'source');
       const testAssignment = assignmentFor(plan.assignments, 'tests');
 
+      emit({
+        type: 'node',
+        id: 'coordinator',
+        status: 'waiting',
+        detail: 'Delegation plan ready. Waiting for investigations and reproduction.',
+      });
       const [sourceTurn, testTurn, initialTests] = await Promise.all([
         this.runInvestigation(input, sourceAssignment, 'source-investigator', emit),
         this.runInvestigation(input, testAssignment, 'test-investigator', emit),
@@ -113,6 +120,7 @@ export class BaselineOrchestrator {
               status: 'running',
               threadId,
             }),
+          onProgress: progressReporter('coordinator', emit),
         },
       );
       recordCodexCompletion(emit, implementation);
@@ -154,6 +162,7 @@ export class BaselineOrchestrator {
       {
         onCheckpoint: ({ threadId }) =>
           emit({ type: 'node', id: nodeId, status: 'running', threadId }),
+        onProgress: progressReporter(nodeId, emit),
       },
     );
     recordCodexCompletion(emit, result);
@@ -176,6 +185,25 @@ export class BaselineOrchestrator {
     });
     return result;
   }
+}
+
+function progressReporter(
+  nodeId: RunNode['id'],
+  emit: (event: RunEvent) => RunSnapshot,
+): (progress: CodexProgressEvent) => void {
+  return (progress) => {
+    emit({ type: 'node', id: nodeId, status: 'running', detail: progress.message });
+    emit({
+      type: 'trace',
+      entry: {
+        id: `${nodeId}-${progress.id}`,
+        nodeId,
+        kind: progress.type === 'item' ? 'tool' : progress.type,
+        status: progress.status,
+        message: progress.message,
+      },
+    });
+  };
 }
 
 function assignmentFor(

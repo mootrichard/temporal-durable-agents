@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@openai/codex-sdk": "0.147.0",
+    "@phosphor-icons/react": "^2.1.10",
     "@temporalio/activity": "1.22.0",
     "@temporalio/client": "1.22.0",
     "@temporalio/common": "1.22.0",

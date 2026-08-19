@@ -1,10 +1,24 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { Socket } from 'node:net';
 import path from 'node:path';
 
-import { Client, Connection, WorkflowExecutionAlreadyStartedError } from '@temporalio/client';
+import {
+  Client,
+  Connection,
+  WorkflowExecutionAlreadyStartedError,
+  WorkflowNotFoundError,
+} from '@temporalio/client';
 
-import { createInitialSnapshot, type DemoMode, type RunnerMode, type RunSnapshot } from '../shared/run-snapshot.js';
+import {
+  applyRunEvent,
+  createInitialSnapshot,
+  type DemoMode,
+  type RunNode,
+  type RunnerMode,
+  type RunSnapshot,
+} from '../shared/run-snapshot.js';
+import type { CodexHeartbeat } from '../temporal/contracts.js';
 import { createRunWorkspace, getDemoRoot } from '../runtime/workspace.js';
 import { temporalTaskQueue } from '../temporal/contracts.js';
 import { FixWorkflow } from '../temporal/workflows.js';
@@ -32,6 +46,9 @@ export class FleetSupervisor {
   private temporalClient?: Client;
 
   async start(mode: DemoMode, runnerMode: RunnerMode): Promise<RunSnapshot> {
+    if (mode === 'temporal') {
+      await ensureTemporalReachable(process.env.TEMPORAL_ADDRESS ?? 'localhost:7233');
+    }
     const runId = `${mode}-${randomUUID().slice(0, 8)}`;
     const workspace = await createRunWorkspace(runId);
     const managed: ManagedRun = {
@@ -69,7 +86,7 @@ export class FleetSupervisor {
       } catch (error) {
         if (!isQueryTemporarilyUnavailable(error)) throw error;
       }
-      await this.refreshTemporalTestCheckpoint(managed);
+      await this.refreshTemporalProgress(managed);
     }
     return structuredClone(managed.snapshot);
   }
@@ -77,14 +94,13 @@ export class FleetSupervisor {
   async kill(runId: string): Promise<RunSnapshot> {
     const managed = this.requireRun(runId);
     if (!managed.target) throw new Error('The Worker fleet is already offline');
-    if (managed.mode === 'temporal') {
-      await this.snapshot(runId);
-      await this.refreshTemporalTestCheckpoint(managed);
-    }
     managed.expectedExit = true;
     terminateProcessGroup(managed.target, this.ownerToken, 'SIGKILL');
     managed.process = undefined;
     managed.target = undefined;
+    if (managed.mode === 'temporal') {
+      await this.refreshTemporalProgress(managed);
+    }
     managed.snapshot = {
       ...managed.snapshot,
       phase: managed.mode === 'baseline' ? 'interrupted' : managed.snapshot.phase,
@@ -212,24 +228,59 @@ export class FleetSupervisor {
     return this.temporalClient;
   }
 
-  private async refreshTemporalTestCheckpoint(managed: ManagedRun): Promise<void> {
+  private async refreshTemporalProgress(managed: ManagedRun): Promise<void> {
+    if (!shouldProjectTemporalProgress(managed.snapshot)) return;
     try {
       const client = await this.getTemporalClient();
-      const description = await client.workflow.getHandle(managed.runId).describe();
-      for (const pending of description.raw.pendingActivities ?? []) {
-        if (pending.activityType?.name !== 'runTests') continue;
-        const completedFiles = decodeHeartbeatStringArray(pending.heartbeatDetails);
-        if (!completedFiles) continue;
-        managed.snapshot = {
-          ...managed.snapshot,
-          metrics: {
-            ...managed.snapshot.metrics,
-            completedTests: Math.max(
-              managed.snapshot.metrics.completedTests,
-              completedFiles.length,
-            ),
-          },
-        };
+      const descriptions = await Promise.all(
+        temporalProgressWorkflowIds(managed.runId).map(async (workflowId) => {
+          try {
+            return await client.workflow.getHandle(workflowId).describe();
+          } catch (error) {
+            if (workflowId !== managed.runId && error instanceof WorkflowNotFoundError) return undefined;
+            throw error;
+          }
+        }),
+      );
+      for (const pending of descriptions.flatMap(
+        (description) => description?.raw.pendingActivities ?? [],
+      )) {
+        if (pending.activityType?.name === 'runTests') {
+          const completedFiles = decodeHeartbeatStringArray(pending.heartbeatDetails);
+          if (!completedFiles) continue;
+          managed.snapshot = {
+            ...managed.snapshot,
+            metrics: {
+              ...managed.snapshot.metrics,
+              completedTests: Math.max(managed.snapshot.metrics.completedTests, completedFiles.length),
+            },
+          };
+          continue;
+        }
+        if (pending.activityType?.name !== 'runCodexTurn') continue;
+        const heartbeat = decodeCodexHeartbeat(pending.heartbeatDetails);
+        if (!heartbeat?.role) continue;
+        const nodeId = nodeForCodexRole(heartbeat.role);
+        managed.snapshot = applyRunEvent(managed.snapshot, {
+          type: 'node',
+          id: nodeId,
+          status: 'running',
+          detail: heartbeat.progress?.message,
+          threadId: heartbeat.threadId,
+          attempt: pending.attempt ?? 1,
+        });
+        if (heartbeat.progress) {
+          managed.snapshot = applyRunEvent(managed.snapshot, {
+            type: 'trace',
+            entry: {
+              id: `${nodeId}-${heartbeat.progress.id}`,
+              nodeId,
+              kind: heartbeat.progress.type === 'item' ? 'tool' : heartbeat.progress.type,
+              status: heartbeat.progress.status,
+              message: heartbeat.progress.message,
+            },
+          });
+        }
       }
     } catch (error) {
       if (!isQueryTemporarilyUnavailable(error)) throw error;
@@ -237,16 +288,77 @@ export class FleetSupervisor {
   }
 }
 
+export function shouldProjectTemporalProgress(snapshot: RunSnapshot): boolean {
+  return snapshot.phase !== 'complete' && snapshot.phase !== 'failed';
+}
+
+export function temporalProgressWorkflowIds(runId: string): string[] {
+  return [
+    runId,
+    `${runId}-source-investigator`,
+    `${runId}-test-investigator`,
+  ];
+}
+
+export async function ensureTemporalReachable(address: string, timeoutMs = 350): Promise<void> {
+  const { host, port } = parseTemporalAddress(address);
+  const reachable = await new Promise<boolean>((resolve) => {
+    const socket = new Socket();
+    const finish = (result: boolean) => {
+      socket.destroy();
+      resolve(result);
+    };
+    socket.setTimeout(timeoutMs);
+    socket.once('connect', () => finish(true));
+    socket.once('timeout', () => finish(false));
+    socket.once('error', () => finish(false));
+    socket.connect(port, host);
+  });
+  if (!reachable) {
+    throw new Error(`Temporal is offline at ${address}. Start it with npm run temporal:up.`);
+  }
+}
+
+function parseTemporalAddress(address: string): { host: string; port: number } {
+  const separator = address.lastIndexOf(':');
+  if (separator <= 0) return { host: address, port: 7233 };
+  return {
+    host: address.slice(0, separator).replace(/^\[|\]$/g, ''),
+    port: Number.parseInt(address.slice(separator + 1), 10),
+  };
+}
+
+function nodeForCodexRole(role: NonNullable<CodexHeartbeat['role']>): RunNode['id'] {
+  if (role === 'source-investigator') return 'source-investigator';
+  if (role === 'test-investigator') return 'test-investigator';
+  return 'coordinator';
+}
+
+export function decodeCodexHeartbeat(value: Parameters<typeof decodeHeartbeatStringArray>[0]): CodexHeartbeat | undefined {
+  const decoded = decodeHeartbeatPayload(value);
+  return typeof decoded === 'object' && decoded !== null ? decoded as CodexHeartbeat : undefined;
+}
+
 export function decodeHeartbeatStringArray(value: {
   payloads?: Array<{ data?: Uint8Array | null } | null> | null;
 } | null | undefined): string[] | undefined {
-  const bytes = value?.payloads?.[0]?.data;
-  if (!bytes) return undefined;
+  const decoded = decodeHeartbeatPayload(value);
   try {
-    const decoded: unknown = JSON.parse(new TextDecoder().decode(bytes));
     return Array.isArray(decoded) && decoded.every((entry) => typeof entry === 'string')
       ? decoded
       : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function decodeHeartbeatPayload(value: {
+  payloads?: Array<{ data?: Uint8Array | null } | null> | null;
+} | null | undefined): unknown {
+  const bytes = value?.payloads?.[0]?.data;
+  if (!bytes) return undefined;
+  try {
+    return JSON.parse(new TextDecoder().decode(bytes));
   } catch {
     return undefined;
   }

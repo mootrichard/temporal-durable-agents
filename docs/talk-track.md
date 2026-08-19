@@ -12,7 +12,7 @@ Point to the four nodes. Explain that the task is intentionally plain: fix one r
 
 ## 1:15–3:30 — Act I: process tree
 
-Select **Act I · Process tree** and **Fixture**.
+Select **Baseline** and **Fixture**.
 
 > “The coordinator asks Codex for a structured plan with exactly two read-only investigations. Source, tests, and a local test subprocess run concurrently. The main Codex thread then resumes to write one fix.”
 
@@ -20,29 +20,34 @@ Click **Start run**. Wait until the two investigations are running or complete.
 
 > “Right now the promises, thread mapping, and test checkpoint live in JavaScript memory. Git owns any bytes already written, but nothing durable owns what should happen next.”
 
-Click **Kill all workers**.
+Click **Kill workers**. In the **Stop every worker?** dialog, click
+**Stop workers**.
 
 > “This targets the exact detached process group: coordinator, Codex subprocesses, and test subprocesses. The API survives so we can see the last receipt. The process tree died, and its execution tree died with it.”
 
-Click **Restart workers**. Point to the zeroed counters.
+Click **Restart workers**. In **Run evidence**, point to zero Codex turns and
+zero retries.
 
 > “Restart means a fresh orchestration run and a reset fixture. The new process has no basis for distinguishing completed work from unfinished work.”
 
 ## 3:30–5:15 — Migration, not magic
 
-Select **Act II · Execution tree**.
+Select **Temporal**.
 
 > “I moved only orchestration state into a Workflow. The two investigations are Child Workflows with durable identities. Codex calls, tests, Git, and filesystem access stay in Activities because those are external, nondeterministic effects.”
 
-Point to the ownership ledger.
+Select **Coordinator** and point to its thread ID, attempt, and event receipts.
+Select **Test runner** and point to the **Test checkpoint** card.
 
 > “Temporal owns the plan and completion history. Codex session storage owns conversation continuity. Git owns code state. Activity heartbeats own resumable checkpoints. Each system has one clear responsibility.”
 
 ## 5:15–8:15 — Act II: kill and recover
 
-Click **Start run**. Wait for **investigating**, ideally after one Codex turn is recorded.
+Click **Start run**. Wait for **Investigating**, ideally until **Run evidence**
+shows one Codex turn.
 
-Click **Kill all workers**.
+Click **Kill workers**. In the **Stop every worker?** dialog, click
+**Stop workers**.
 
 > “Every Worker and its subprocesses are gone. This frozen view is the API’s last successful Workflow query. Temporal is still holding the execution history.”
 
@@ -52,12 +57,12 @@ Click **Restart workers**.
 
 > “The replacement Worker replays history. Completed Child Workflows supply recorded results. An interrupted Codex Activity reads the heartbeated thread ID and resumes it. If that machine-local session vanished, it can create a replacement from the durable assignment and current worktree. Tests read their heartbeated filenames and skip passed files.”
 
-Wait for **complete**. Point in this order:
+Wait for **Run complete**. Point in this order:
 
 1. completed nodes;
-2. retried-turn counter;
-3. test checkpoint at 4/4;
-4. one-line final diff.
+2. **Codex turns** and **Retries** in **Completion receipt**;
+3. the **Test checkpoint** value at 4/4;
+4. the one-line final diff in **Completion receipt**.
 
 > “Same execution tree, different Worker fleet. The Worker executes the work; it does not own the work.”
 

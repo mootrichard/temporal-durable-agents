@@ -2,11 +2,11 @@ import type { DelegationPlan } from '../shared/delegation-plan.js';
 
 export const plannerPrompt = `You are coordinating a small TypeScript bug fix in an isolated fixture repository.
 
-Inspect the repository and return a delegation plan with exactly two read-only investigations:
+Return a delegation plan immediately with exactly two read-only investigations:
 1. one focused on the implementation;
 2. one focused on the test contract.
 
-Do not edit files. Keep each assignment bounded and evidence-oriented.`;
+Do not inspect files, run commands, or use tools during this planning turn. The delegated investigators own that work. Do not edit files. Keep each assignment bounded and evidence-oriented.`;
 
 export function investigationPrompt(prompt: string): string {
   return `${prompt}\n\nReturn a concise finding with filenames, evidence, and a minimal recommendation. Do not edit files.`;

@@ -47,7 +47,12 @@ export class FixtureCodexRunner implements CodexRunner {
   async run(request: CodexRunRequest, hooks: CodexRunHooks = {}): Promise<CodexRunResult> {
     const threadId = request.threadId ?? `fixture-${request.role}`;
     hooks.onCheckpoint?.({ threadId, threadTurnNumber: request.threadId ? 2 : 1 });
-    hooks.onProgress?.({ type: 'thread', message: `${request.role} started` });
+    hooks.onProgress?.({
+      id: `${request.role}-thread`,
+      type: 'thread',
+      status: 'running',
+      message: `${request.role} started`,
+    });
     await delay(this.delayMs);
 
     if (request.role === 'implementer') {
@@ -60,11 +65,21 @@ export class FixtureCodexRunner implements CodexRunner {
         throw new Error('The frozen retry defect was not found in the run workspace');
       }
       await writeFile(filename, source.replace('attempt <= maxAttempts', 'attempt < maxAttempts'));
-      hooks.onProgress?.({ type: 'item', message: 'Applied the one-line retry fix' });
+      hooks.onProgress?.({
+        id: `${request.role}-edit`,
+        type: 'item',
+        status: 'complete',
+        message: 'Applied the one-line retry fix',
+      });
     }
 
     await delay(this.delayMs);
-    hooks.onProgress?.({ type: 'message', message: `${request.role} completed` });
+    hooks.onProgress?.({
+      id: `${request.role}-message`,
+      type: 'message',
+      status: 'complete',
+      message: `${request.role} completed`,
+    });
     return {
       threadId,
       finalResponse: fixtureResponses[request.role],

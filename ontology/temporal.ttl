@@ -1,0 +1,1111 @@
+@prefix tmo: <https://example.org/temporal-ontology#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://example.org/temporal-ontology>
+    a owl:Ontology ;
+    rdfs:label "Temporal concepts ontology"@en ;
+    rdfs:comment "A project-authored ontology grounded in Temporal public documentation. It is not an official Temporal ontology."@en ;
+    dcterms:created "2026-08-16"^^xsd:date ;
+    dcterms:modified "2026-08-16"^^xsd:date ;
+    dcterms:source <https://docs.temporal.io/glossary> ,
+        <https://docs.temporal.io/design-patterns> ,
+        <https://docs.temporal.io/develop/worker-performance/> ,
+        <https://docs.temporal.io/evaluate/why-temporal> ,
+        <https://docs.temporal.io/evaluate/understanding-temporal> ,
+        <https://github.com/temporalio/skill-temporal-developer/tree/4f7b14626c56d06574564cd4d265bbcb6425a21c> ;
+    owl:versionIRI <https://example.org/temporal-ontology/0.2.0> ;
+    owl:versionInfo "0.2.0" .
+
+#################################################################
+# Annotation properties
+#################################################################
+
+dcterms:created a owl:AnnotationProperty .
+dcterms:modified a owl:AnnotationProperty .
+dcterms:source a owl:AnnotationProperty .
+
+tmo:mayDenote
+    a owl:AnnotationProperty ;
+    rdfs:label "may denote"@en ;
+    rdfs:comment "Links an ambiguous convenience term to a precise ontology class it may denote."@en .
+
+tmo:usesPrimitive
+    a owl:AnnotationProperty ;
+    rdfs:label "uses primitive"@en ;
+    rdfs:comment "Names a Temporal concept used by a design pattern without treating the class itself as an individual."@en .
+
+tmo:scopeNote
+    a owl:AnnotationProperty ;
+    rdfs:label "scope note"@en .
+
+tmo:agentReference
+    a owl:AnnotationProperty ;
+    rdfs:label "agent reference"@en ;
+    rdfs:comment "Points agents to an operational reference for a concept after the ontology has resolved its meaning."@en .
+
+#################################################################
+# Object properties
+#################################################################
+
+tmo:hasPart
+    a owl:ObjectProperty , owl:TransitiveProperty ;
+    owl:inverseOf tmo:partOf ;
+    rdfs:label "has part"@en .
+
+tmo:partOf
+    a owl:ObjectProperty , owl:TransitiveProperty ;
+    rdfs:label "part of"@en .
+
+tmo:hasWorkflowExecution
+    a owl:ObjectProperty ;
+    rdfs:subPropertyOf tmo:hasPart ;
+    rdfs:domain tmo:TemporalApplication ;
+    rdfs:range tmo:WorkflowExecution ;
+    rdfs:label "has Workflow Execution"@en .
+
+tmo:constrainsExecution
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:Definition ;
+    rdfs:range tmo:Execution ;
+    rdfs:label "constrains execution"@en .
+
+tmo:executesDefinition
+    a owl:ObjectProperty ;
+    owl:inverseOf tmo:constrainsExecution ;
+    rdfs:domain tmo:Execution ;
+    rdfs:range tmo:Definition ;
+    rdfs:label "executes definition"@en .
+
+tmo:mapsNameToDefinition
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:Type ;
+    rdfs:range tmo:Definition ;
+    rdfs:label "maps name to definition"@en .
+
+tmo:hasTaskExecution
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:Execution ;
+    rdfs:range tmo:TaskExecution ;
+    rdfs:label "has Task Execution"@en .
+
+tmo:hasEventHistory
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:WorkflowExecution ;
+    rdfs:range tmo:EventHistory ;
+    rdfs:label "has Event History"@en .
+
+tmo:recordsEvent
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:EventHistory ;
+    rdfs:range tmo:Event ;
+    rdfs:label "records Event"@en .
+
+tmo:representsStateOf
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:EventHistory ;
+    rdfs:range tmo:WorkflowExecution ;
+    rdfs:label "represents state of"@en .
+
+tmo:makesProgressOn
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:Task ;
+    rdfs:range tmo:Execution ;
+    rdfs:label "makes progress on"@en .
+
+tmo:containsTask
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:TaskQueue ;
+    rdfs:range tmo:Task ;
+    rdfs:label "contains Task"@en .
+
+tmo:pollsTaskQueue
+    a owl:ObjectProperty ;
+    rdfs:range tmo:TaskQueue ;
+    rdfs:label "polls Task Queue"@en .
+
+tmo:executesTask
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:WorkerProcess ;
+    rdfs:range tmo:Task ;
+    rdfs:label "executes Task"@en .
+
+tmo:issuesCommand
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:WorkflowTaskExecution ;
+    rdfs:range tmo:Command ;
+    rdfs:label "issues Command"@en .
+
+tmo:sentTo
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:WorkflowInteraction ;
+    rdfs:range tmo:WorkflowExecution ;
+    rdfs:label "sent to"@en .
+
+tmo:hasPolicy
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:Execution ;
+    rdfs:range tmo:ExecutionPolicy ;
+    rdfs:label "has policy"@en .
+
+tmo:identifiedBy
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:Execution ;
+    rdfs:range tmo:Identifier ;
+    rdfs:label "identified by"@en .
+
+tmo:suppliesSlotType
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:SlotSupplier ;
+    rdfs:range tmo:SlotType ;
+    rdfs:label "supplies slot type"@en .
+
+tmo:providesSlot
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:SlotSupplier ;
+    rdfs:range tmo:WorkerTaskSlot ;
+    rdfs:label "provides slot"@en .
+
+tmo:configuresSupplier
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:WorkerTuner ;
+    rdfs:range tmo:SlotSupplier ;
+    rdfs:label "configures supplier"@en .
+
+tmo:deliversTaskTo
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:TaskPoller ;
+    rdfs:range tmo:WorkerTaskSlot ;
+    rdfs:label "delivers Task to"@en .
+
+tmo:registersDefinition
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:WorkerProgram ;
+    rdfs:range tmo:Definition ;
+    rdfs:label "registers definition"@en .
+
+tmo:hasConstraint
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:Definition ;
+    rdfs:range tmo:ProgrammingConstraint ;
+    rdfs:label "has programming constraint"@en .
+
+tmo:mapsToEvent
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:Command ;
+    rdfs:range tmo:Event ;
+    rdfs:label "maps to Event"@en .
+
+tmo:usesEventHistory
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:Replay ;
+    rdfs:range tmo:EventHistory ;
+    rdfs:label "uses Event History"@en .
+
+tmo:reconstructsStateOf
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:Replay ;
+    rdfs:range tmo:WorkflowExecution ;
+    rdfs:label "reconstructs state of"@en .
+
+tmo:invokedBy
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:Execution ;
+    rdfs:label "invoked by"@en .
+
+tmo:canProduceEffect
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:ActivityTaskExecution ;
+    rdfs:range tmo:ExternalEffect ;
+    rdfs:label "can produce effect"@en .
+
+tmo:protectedBy
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:ExternalEffect ;
+    rdfs:range tmo:ApplicationSafetyConcept ;
+    rdfs:label "protected by"@en .
+
+tmo:usesVersioningStrategy
+    a owl:ObjectProperty ;
+    rdfs:range tmo:VersioningStrategy ;
+    rdfs:label "uses versioning strategy"@en .
+
+tmo:hasBuildId
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:WorkerDeployment ;
+    rdfs:range tmo:BuildId ;
+    rdfs:label "has Build Id"@en .
+
+tmo:hasVersioningBehavior
+    a owl:ObjectProperty ;
+    rdfs:domain tmo:WorkerDeployment ;
+    rdfs:range tmo:VersioningBehavior ;
+    rdfs:label "has versioning behavior"@en .
+
+tmo:hasReleaseStage
+    a owl:AnnotationProperty ;
+    rdfs:label "has release stage"@en .
+
+#################################################################
+# Top-level classes
+#################################################################
+
+tmo:TemporalConcept
+    a owl:Class ;
+    rdfs:label "Temporal Concept"@en .
+
+tmo:PlatformStructure
+    a owl:Class ;
+    rdfs:subClassOf tmo:TemporalConcept ;
+    rdfs:label "Platform Structure"@en .
+
+tmo:ApplicationStructure
+    a owl:Class ;
+    rdfs:subClassOf tmo:TemporalConcept ;
+    rdfs:label "Application Structure"@en .
+
+tmo:RuntimeStructure
+    a owl:Class ;
+    rdfs:subClassOf tmo:TemporalConcept ;
+    rdfs:label "Runtime Structure"@en .
+
+tmo:WorkflowInteraction
+    a owl:Class ;
+    rdfs:subClassOf tmo:TemporalConcept ;
+    rdfs:label "Workflow Interaction"@en .
+
+tmo:ExecutionPolicy
+    a owl:Class ;
+    rdfs:subClassOf tmo:TemporalConcept ;
+    rdfs:label "Execution Policy"@en .
+
+tmo:PlatformCapability
+    a owl:Class ;
+    rdfs:subClassOf tmo:TemporalConcept ;
+    rdfs:label "Platform Capability"@en .
+
+tmo:Identifier
+    a owl:Class ;
+    rdfs:subClassOf tmo:TemporalConcept ;
+    rdfs:label "Identifier"@en .
+
+tmo:OperationalConcept
+    a owl:Class ;
+    rdfs:subClassOf tmo:TemporalConcept ;
+    rdfs:label "Operational Concept"@en .
+
+tmo:DesignPattern
+    a owl:Class ;
+    rdfs:subClassOf tmo:TemporalConcept ;
+    rdfs:label "Design Pattern"@en ;
+    rdfs:comment "A reusable composition of Temporal durable-execution primitives for a recurring problem."@en ;
+    dcterms:source <https://docs.temporal.io/design-patterns> .
+
+tmo:AmbiguousTerm
+    a owl:Class ;
+    rdfs:subClassOf tmo:TemporalConcept ;
+    rdfs:label "Ambiguous Convenience Term"@en .
+
+[] a owl:AllDisjointClasses ;
+    owl:members (
+        tmo:PlatformStructure
+        tmo:ApplicationStructure
+        tmo:RuntimeStructure
+        tmo:WorkflowInteraction
+        tmo:ExecutionPolicy
+        tmo:PlatformCapability
+        tmo:Identifier
+        tmo:OperationalConcept
+        tmo:DesignPattern
+        tmo:AmbiguousTerm
+    ) .
+
+#################################################################
+# Platform and application structure
+#################################################################
+
+tmo:TemporalPlatform
+    a owl:Class ;
+    rdfs:subClassOf tmo:PlatformStructure ,
+        [ a owl:Restriction ; owl:onProperty tmo:hasPart ; owl:someValuesFrom tmo:TemporalService ] ,
+        [ a owl:Restriction ; owl:onProperty tmo:hasPart ; owl:someValuesFrom tmo:WorkerProcess ] ;
+    rdfs:label "Temporal Platform"@en ;
+    rdfs:comment "A Temporal Service together with Worker Processes."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:TemporalService
+    a owl:Class ;
+    rdfs:subClassOf tmo:PlatformStructure ,
+        [ a owl:Restriction ; owl:onProperty tmo:hasPart ; owl:someValuesFrom tmo:TemporalServer ] ,
+        [ a owl:Restriction ; owl:onProperty tmo:hasPart ; owl:someValuesFrom tmo:PersistenceStore ] ,
+        [ a owl:Restriction ; owl:onProperty tmo:hasPart ; owl:someValuesFrom tmo:VisibilityStore ] ;
+    rdfs:label "Temporal Service"@en ;
+    rdfs:comment "A Temporal Server paired with persistence and Visibility stores."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:TemporalServer
+    a owl:Class ;
+    rdfs:subClassOf tmo:PlatformStructure ;
+    rdfs:label "Temporal Server"@en ;
+    rdfs:comment "The horizontally scalable server services in a Temporal Service."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:PersistenceStore
+    a owl:Class ;
+    rdfs:subClassOf tmo:PlatformStructure ;
+    rdfs:label "Persistence Store"@en .
+
+tmo:VisibilityStore
+    a owl:Class ;
+    rdfs:subClassOf tmo:PlatformStructure ;
+    rdfs:label "Visibility Store"@en .
+
+tmo:Namespace
+    a owl:Class ;
+    rdfs:subClassOf tmo:PlatformStructure ;
+    rdfs:label "Namespace"@en ;
+    rdfs:comment "A unit of isolation within the Temporal Platform."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:TemporalApplication
+    a owl:Class ;
+    rdfs:subClassOf tmo:ApplicationStructure ;
+    rdfs:label "Temporal Application"@en ;
+    rdfs:comment "A set of Workflow Executions."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:Definition
+    a owl:Class ;
+    rdfs:subClassOf tmo:ApplicationStructure ;
+    rdfs:label "Definition"@en .
+
+tmo:WorkflowDefinition
+    a owl:Class ;
+    rdfs:subClassOf tmo:Definition ,
+        [ a owl:Restriction ; owl:onProperty tmo:hasConstraint ; owl:someValuesFrom tmo:WorkflowDeterminism ] ;
+    rdfs:label "Workflow Definition"@en ;
+    rdfs:comment "Code that defines the constraints of a Workflow Execution."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:ActivityDefinition
+    a owl:Class ;
+    rdfs:subClassOf tmo:Definition ;
+    rdfs:label "Activity Definition"@en ;
+    rdfs:comment "Code that defines the constraints of an Activity Task Execution."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:Type
+    a owl:Class ;
+    rdfs:subClassOf tmo:ApplicationStructure ;
+    rdfs:label "Type"@en .
+
+tmo:WorkflowType
+    a owl:Class ;
+    rdfs:subClassOf tmo:Type ,
+        [ a owl:Restriction ; owl:onProperty tmo:mapsNameToDefinition ; owl:allValuesFrom tmo:WorkflowDefinition ] ;
+    rdfs:label "Workflow Type"@en ;
+    rdfs:comment "A name mapped to a Workflow Definition."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:ActivityType
+    a owl:Class ;
+    rdfs:subClassOf tmo:Type ,
+        [ a owl:Restriction ; owl:onProperty tmo:mapsNameToDefinition ; owl:allValuesFrom tmo:ActivityDefinition ] ;
+    rdfs:label "Activity Type"@en ;
+    rdfs:comment "A name mapped to an Activity Definition."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:TemporalSDK
+    a owl:Class ;
+    rdfs:subClassOf tmo:ApplicationStructure ;
+    rdfs:label "Temporal SDK"@en ;
+    rdfs:comment "A language-specific library for clients, Workflow Definitions, and Worker Programs."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:TemporalClient
+    a owl:Class ;
+    rdfs:subClassOf tmo:ApplicationStructure ;
+    rdfs:label "Temporal Client"@en ;
+    rdfs:comment "An SDK-provided API surface for communication with a Temporal Service."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:ProgrammingConstraint
+    a owl:Class ;
+    rdfs:subClassOf tmo:ApplicationStructure ;
+    rdfs:label "Programming Constraint"@en .
+
+tmo:WorkflowDeterminism
+    a owl:Class ;
+    rdfs:subClassOf tmo:ProgrammingConstraint ;
+    rdfs:label "Workflow Determinism"@en ;
+    rdfs:comment "The requirement that Workflow code emit Commands compatible with the recorded Event History whenever it replays."@en ;
+    dcterms:source <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/determinism.md> ;
+    tmo:agentReference <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/determinism.md> .
+
+tmo:ReplayCompatibility
+    a owl:Class ;
+    rdfs:subClassOf tmo:ProgrammingConstraint ;
+    rdfs:label "Replay Compatibility"@en ;
+    rdfs:comment "Compatibility between current Workflow code and the Command sequence represented by existing Event Histories."@en ;
+    dcterms:source <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/determinism.md> .
+
+tmo:ApplicationSafetyConcept
+    a owl:Class ;
+    rdfs:subClassOf tmo:ApplicationStructure ;
+    rdfs:label "Application Safety Concept"@en .
+
+tmo:ExternalEffect
+    a owl:Class ;
+    rdfs:subClassOf tmo:ApplicationSafetyConcept ;
+    rdfs:label "External Effect"@en ;
+    rdfs:comment "A change outside Workflow state, such as an API call, file write, notification, or business-system mutation."@en ;
+    dcterms:source <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/gotchas.md> .
+
+tmo:Idempotency
+    a owl:Class ;
+    rdfs:subClassOf tmo:ApplicationSafetyConcept ;
+    rdfs:label "Idempotency"@en ;
+    rdfs:comment "Application design that prevents repeated execution attempts from producing additional external effects."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> ,
+        <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/gotchas.md> .
+
+[] a owl:AllDisjointClasses ;
+    owl:members ( tmo:Definition tmo:Type tmo:TemporalApplication tmo:TemporalSDK tmo:TemporalClient tmo:ProgrammingConstraint tmo:ApplicationSafetyConcept ) .
+
+#################################################################
+# Runtime structure
+#################################################################
+
+tmo:Execution
+    a owl:Class ;
+    rdfs:subClassOf tmo:RuntimeStructure ;
+    rdfs:label "Execution"@en .
+
+tmo:WorkflowExecution
+    a owl:Class ;
+    rdfs:subClassOf tmo:Execution ,
+        [ a owl:Restriction ; owl:onProperty tmo:executesDefinition ; owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ; owl:onClass tmo:WorkflowDefinition ] ,
+        [ a owl:Restriction ; owl:onProperty tmo:hasEventHistory ; owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ; owl:onClass tmo:EventHistory ] ;
+    rdfs:label "Workflow Execution"@en ;
+    rdfs:comment "A durable, scalable, reliable, and reactive function execution."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:ActivityExecution
+    a owl:Class ;
+    rdfs:subClassOf tmo:Execution ,
+        [ a owl:Restriction ; owl:onProperty tmo:hasTaskExecution ; owl:minQualifiedCardinality "1"^^xsd:nonNegativeInteger ; owl:onClass tmo:ActivityTaskExecution ] ;
+    rdfs:label "Activity Execution"@en ;
+    rdfs:comment "The full chain of Activity Task Executions for one Activity."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:WorkflowInvokedActivityExecution
+    a owl:Class ;
+    rdfs:subClassOf tmo:ActivityExecution ,
+        [ a owl:Restriction ; owl:onProperty tmo:invokedBy ; owl:someValuesFrom tmo:WorkflowExecution ] ;
+    rdfs:label "Workflow-Invoked Activity Execution"@en ;
+    rdfs:comment "An Activity Execution scheduled from a Workflow Execution."@en .
+
+tmo:StandaloneActivityExecution
+    a owl:Class ;
+    rdfs:subClassOf tmo:ActivityExecution ,
+        [ a owl:Restriction ; owl:onProperty tmo:invokedBy ; owl:someValuesFrom tmo:TemporalClient ] ;
+    owl:disjointWith tmo:WorkflowInvokedActivityExecution ;
+    rdfs:label "Standalone Activity Execution"@en ;
+    rdfs:comment "A top-level Activity Execution started directly by a Temporal Client, outside a Workflow Execution."@en ;
+    tmo:hasReleaseStage tmo:PublicPreview ;
+    dcterms:source <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/standalone-activities.md> ;
+    tmo:agentReference <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/standalone-activities.md> .
+
+tmo:TaskExecution
+    a owl:Class ;
+    rdfs:subClassOf tmo:Execution ;
+    rdfs:label "Task Execution"@en .
+
+tmo:WorkflowTaskExecution
+    a owl:Class ;
+    rdfs:subClassOf tmo:TaskExecution ;
+    rdfs:label "Workflow Task Execution"@en ;
+    rdfs:comment "A Worker using a Workflow Task to make progress on a Workflow Definition."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:ActivityTaskExecution
+    a owl:Class ;
+    rdfs:subClassOf tmo:TaskExecution ,
+        [ a owl:Restriction ; owl:onProperty tmo:executesDefinition ; owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ; owl:onClass tmo:ActivityDefinition ] ;
+    rdfs:label "Activity Task Execution"@en ;
+    rdfs:comment "A Worker executing an Activity Definition with the context in an Activity Task."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:Task
+    a owl:Class ;
+    rdfs:subClassOf tmo:RuntimeStructure ;
+    rdfs:label "Task"@en ;
+    rdfs:comment "Context needed to make progress on a Workflow Execution or Activity Execution."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:WorkflowTask
+    a owl:Class ;
+    rdfs:subClassOf tmo:Task ,
+        [ a owl:Restriction ; owl:onProperty tmo:makesProgressOn ; owl:allValuesFrom tmo:WorkflowExecution ] ;
+    rdfs:label "Workflow Task"@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:ActivityTask
+    a owl:Class ;
+    rdfs:subClassOf tmo:Task ,
+        [ a owl:Restriction ; owl:onProperty tmo:makesProgressOn ; owl:allValuesFrom tmo:ActivityExecution ] ;
+    rdfs:label "Activity Task"@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:NexusTask
+    a owl:Class ;
+    rdfs:subClassOf tmo:Task ;
+    rdfs:label "Nexus Task"@en ;
+    dcterms:source <https://docs.temporal.io/develop/worker-performance/> .
+
+tmo:LocalActivityTask
+    a owl:Class ;
+    rdfs:subClassOf tmo:ActivityTask ;
+    rdfs:label "Local Activity Task"@en ;
+    dcterms:source <https://docs.temporal.io/develop/worker-performance/> .
+
+tmo:EventHistory
+    a owl:Class ;
+    rdfs:subClassOf tmo:RuntimeStructure ,
+        [ a owl:Restriction ; owl:onProperty tmo:representsStateOf ; owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ; owl:onClass tmo:WorkflowExecution ] ;
+    rdfs:label "Event History"@en ;
+    rdfs:comment "An append-only Event log representing the state of one Workflow Execution."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:Event
+    a owl:Class ;
+    rdfs:subClassOf tmo:RuntimeStructure ;
+    rdfs:label "Event"@en ;
+    rdfs:comment "A record created by the Temporal Service in response to an occurrence or Workflow Command."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:Command
+    a owl:Class ;
+    rdfs:subClassOf tmo:RuntimeStructure ;
+    rdfs:label "Command"@en ;
+    rdfs:comment "A requested action issued to the Temporal Service after a Workflow Task Execution."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:Failure
+    a owl:Class ;
+    rdfs:subClassOf tmo:RuntimeStructure ;
+    rdfs:label "Failure"@en ;
+    rdfs:comment "Temporal's representation of an error that occurs in the system."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> ;
+    tmo:agentReference <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/error-reference.md> .
+
+tmo:NonDeterminismFailure
+    a owl:Class ;
+    rdfs:subClassOf tmo:Failure ;
+    rdfs:label "Non-Determinism Failure"@en ;
+    rdfs:comment "A failure raised when Commands produced during replay conflict with recorded Events."@en ;
+    dcterms:source <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/determinism.md> ;
+    tmo:agentReference <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/troubleshooting.md> .
+
+tmo:Payload
+    a owl:Class ;
+    rdfs:subClassOf tmo:RuntimeStructure ;
+    rdfs:label "Payload"@en ;
+    rdfs:comment "Binary data used for Temporal inputs and outputs."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:TaskQueue
+    a owl:Class ;
+    rdfs:subClassOf tmo:RuntimeStructure ;
+    rdfs:label "Task Queue"@en ;
+    rdfs:comment "A queue polled by Worker Processes for Tasks."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:WorkerComponent
+    a owl:Class ;
+    rdfs:subClassOf tmo:RuntimeStructure ;
+    rdfs:label "Worker Component"@en .
+
+tmo:WorkerProgram
+    a owl:Class ;
+    rdfs:subClassOf tmo:WorkerComponent ,
+        [ a owl:Restriction ; owl:onProperty tmo:registersDefinition ; owl:someValuesFrom tmo:Definition ] ;
+    rdfs:label "Worker Program"@en ;
+    rdfs:comment "Static code that defines the constraints of a Worker Process."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:WorkerProcess
+    a owl:Class ;
+    rdfs:subClassOf tmo:WorkerComponent ,
+        [ a owl:Restriction ; owl:onProperty tmo:pollsTaskQueue ; owl:someValuesFrom tmo:TaskQueue ] ;
+    rdfs:label "Worker Process"@en ;
+    rdfs:comment "A running process that polls Task Queues, executes application code for Tasks, and returns results."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:WorkerEntity
+    a owl:Class ;
+    rdfs:subClassOf tmo:WorkerComponent ,
+        [ a owl:Restriction ; owl:onProperty tmo:pollsTaskQueue ; owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ; owl:onClass tmo:TaskQueue ] ;
+    rdfs:label "Worker Entity"@en ;
+    rdfs:comment "An individual Worker inside a Worker Process that listens to one Task Queue."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+[] a owl:AllDisjointClasses ;
+    owl:members ( tmo:WorkflowExecution tmo:ActivityExecution tmo:TaskExecution ) .
+
+[] a owl:AllDisjointClasses ;
+    owl:members ( tmo:WorkflowTask tmo:ActivityTask tmo:NexusTask ) .
+
+[] a owl:AllDisjointClasses ;
+    owl:members ( tmo:WorkerProgram tmo:WorkerProcess tmo:WorkerEntity ) .
+
+#################################################################
+# Workflow interactions, policies, capabilities, and identifiers
+#################################################################
+
+tmo:Signal
+    a owl:Class ;
+    rdfs:subClassOf tmo:WorkflowInteraction ;
+    rdfs:label "Signal"@en ;
+    rdfs:comment "An asynchronous request to a Workflow Execution."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> ;
+    tmo:agentReference <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/interactive-workflows.md> .
+
+tmo:SignalWithStart
+    a owl:Class ;
+    rdfs:subClassOf tmo:Signal ;
+    rdfs:label "Signal-With-Start"@en ;
+    rdfs:comment "An operation that starts and Signals a Workflow Execution, or Signals it when it already exists."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:Query
+    a owl:Class ;
+    rdfs:subClassOf tmo:WorkflowInteraction ;
+    rdfs:label "Query"@en ;
+    rdfs:comment "A synchronous operation that reports Workflow Execution state."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> ;
+    tmo:agentReference <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/interactive-workflows.md> .
+
+tmo:Update
+    a owl:Class ;
+    rdfs:subClassOf tmo:WorkflowInteraction ;
+    rdfs:label "Update"@en ;
+    rdfs:comment "A request to a Workflow Execution that can modify state and return a response."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> , <https://docs.temporal.io/design-patterns> ;
+    tmo:agentReference <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/interactive-workflows.md> .
+
+[] a owl:AllDisjointClasses ;
+    owl:members ( tmo:Signal tmo:Query tmo:Update ) .
+
+tmo:RetryPolicy
+    a owl:Class ;
+    rdfs:subClassOf tmo:ExecutionPolicy ;
+    rdfs:label "Retry Policy"@en ;
+    rdfs:comment "Attributes that instruct the Temporal Service how to retry a failed execution."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:Timeout
+    a owl:Class ;
+    rdfs:subClassOf tmo:ExecutionPolicy ;
+    rdfs:label "Timeout"@en .
+
+tmo:ScheduleToCloseTimeout a owl:Class ; rdfs:subClassOf tmo:Timeout ; rdfs:label "Schedule-To-Close Timeout"@en ; dcterms:source <https://docs.temporal.io/glossary> .
+tmo:ScheduleToStartTimeout a owl:Class ; rdfs:subClassOf tmo:Timeout ; rdfs:label "Schedule-To-Start Timeout"@en ; dcterms:source <https://docs.temporal.io/glossary> .
+tmo:StartToCloseTimeout a owl:Class ; rdfs:subClassOf tmo:Timeout ; rdfs:label "Start-To-Close Timeout"@en ; dcterms:source <https://docs.temporal.io/glossary> .
+tmo:WorkflowExecutionTimeout a owl:Class ; rdfs:subClassOf tmo:Timeout ; rdfs:label "Workflow Execution Timeout"@en ; dcterms:source <https://docs.temporal.io/glossary> .
+tmo:WorkflowRunTimeout a owl:Class ; rdfs:subClassOf tmo:Timeout ; rdfs:label "Workflow Run Timeout"@en ; dcterms:source <https://docs.temporal.io/glossary> .
+tmo:WorkflowTaskTimeout a owl:Class ; rdfs:subClassOf tmo:Timeout ; rdfs:label "Workflow Task Timeout"@en ; dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:DurableExecution
+    a owl:Class ;
+    rdfs:subClassOf tmo:PlatformCapability ;
+    rdfs:label "Durable Execution"@en ;
+    rdfs:comment "The capability for a Workflow Execution to preserve state and progress through failures."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> , <https://docs.temporal.io/evaluate/why-temporal> .
+
+tmo:Visibility
+    a owl:Class ;
+    rdfs:subClassOf tmo:PlatformCapability ;
+    rdfs:label "Visibility"@en ;
+    rdfs:comment "Subsystems and APIs for viewing Workflow Executions in a Temporal Service."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:Replay
+    a owl:Class ;
+    rdfs:subClassOf tmo:PlatformCapability ,
+        [ a owl:Restriction ; owl:onProperty tmo:usesEventHistory ; owl:someValuesFrom tmo:EventHistory ] ,
+        [ a owl:Restriction ; owl:onProperty tmo:reconstructsStateOf ; owl:someValuesFrom tmo:WorkflowExecution ] ;
+    rdfs:label "Replay"@en ;
+    rdfs:comment "Reconstruction of Workflow state by re-executing Workflow code against Event History."@en ;
+    dcterms:source <https://docs.temporal.io/evaluate/understanding-temporal> ,
+        <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/determinism.md> ;
+    tmo:agentReference <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/determinism.md> .
+
+tmo:RecordedSideEffect
+    a owl:Class ;
+    rdfs:subClassOf tmo:PlatformCapability ;
+    rdfs:label "Side Effect (recorded SDK mechanism)"@en ;
+    rdfs:comment "A short non-deterministic computation whose result is recorded in Event History for deterministic replay."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:ContinueAsNew
+    a owl:Class ;
+    rdfs:subClassOf tmo:PlatformCapability ;
+    rdfs:label "Continue-As-New"@en ;
+    rdfs:comment "Passing relevant state into a new Workflow Execution with fresh Event History."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:ActivityHeartbeat
+    a owl:Class ;
+    rdfs:subClassOf tmo:PlatformCapability ;
+    rdfs:label "Activity Heartbeat"@en ;
+    rdfs:comment "A progress signal from the Worker executing an Activity to the Temporal Service."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:AsynchronousActivityCompletion
+    a owl:Class ;
+    rdfs:subClassOf tmo:PlatformCapability ;
+    rdfs:label "Asynchronous Activity Completion"@en ;
+    rdfs:comment "Completion of an Activity by a result supplied later from an external system."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:WorkflowId a owl:Class ; rdfs:subClassOf tmo:Identifier ; rdfs:label "Workflow Id"@en ; dcterms:source <https://docs.temporal.io/glossary> .
+tmo:RunId a owl:Class ; rdfs:subClassOf tmo:Identifier ; rdfs:label "Run Id"@en ; dcterms:source <https://docs.temporal.io/glossary> .
+tmo:ActivityId a owl:Class ; rdfs:subClassOf tmo:Identifier ; rdfs:label "Activity Id"@en ; dcterms:source <https://docs.temporal.io/glossary> .
+tmo:TaskToken a owl:Class ; rdfs:subClassOf tmo:Identifier ; rdfs:label "Task Token"@en ; dcterms:source <https://docs.temporal.io/glossary> .
+tmo:BuildId a owl:Class ; rdfs:subClassOf tmo:Identifier ; rdfs:label "Build Id"@en ; dcterms:source <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/versioning.md> .
+
+#################################################################
+# Worker performance
+#################################################################
+
+tmo:WorkerTaskSlot
+    a owl:Class ;
+    rdfs:subClassOf tmo:OperationalConcept ;
+    rdfs:label "Worker Task Slot"@en ;
+    rdfs:comment "Capacity in a Worker to execute one concurrent Task."@en ;
+    dcterms:source <https://docs.temporal.io/develop/worker-performance/> .
+
+tmo:SlotSupplier
+    a owl:Class ;
+    rdfs:subClassOf tmo:OperationalConcept ,
+        [ a owl:Restriction ; owl:onProperty tmo:suppliesSlotType ; owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ; owl:onClass tmo:SlotType ] ;
+    rdfs:label "Slot Supplier"@en ;
+    rdfs:comment "A strategy that decides when a Worker can accept another Task of one slot type."@en ;
+    dcterms:source <https://docs.temporal.io/develop/worker-performance/> .
+
+tmo:FixedSizeSlotSupplier
+    a owl:Class ;
+    rdfs:subClassOf tmo:SlotSupplier ;
+    rdfs:label "Fixed Size Slot Supplier"@en ;
+    dcterms:source <https://docs.temporal.io/develop/worker-performance/> .
+
+tmo:ResourceBasedSlotSupplier
+    a owl:Class ;
+    rdfs:subClassOf tmo:SlotSupplier ;
+    rdfs:label "Resource Based Slot Supplier"@en ;
+    dcterms:source <https://docs.temporal.io/develop/worker-performance/> .
+
+tmo:CustomSlotSupplier
+    a owl:Class ;
+    rdfs:subClassOf tmo:SlotSupplier ;
+    rdfs:label "Custom Slot Supplier"@en ;
+    dcterms:source <https://docs.temporal.io/develop/worker-performance/> .
+
+tmo:WorkerTuner
+    a owl:Class ;
+    rdfs:subClassOf tmo:OperationalConcept ;
+    rdfs:label "Worker Tuner"@en ;
+    rdfs:comment "Configuration that assigns Slot Suppliers to Worker task-slot types."@en ;
+    dcterms:source <https://docs.temporal.io/develop/worker-performance/> .
+
+tmo:TaskPoller
+    a owl:Class ;
+    rdfs:subClassOf tmo:OperationalConcept ,
+        [ a owl:Restriction ; owl:onProperty tmo:pollsTaskQueue ; owl:someValuesFrom tmo:TaskQueue ] ;
+    rdfs:label "Task Poller"@en ;
+    rdfs:comment "A long-polling Worker component that receives Tasks and delivers them to execution slots."@en ;
+    dcterms:source <https://docs.temporal.io/develop/worker-performance/> .
+
+tmo:WorkflowCache
+    a owl:Class ;
+    rdfs:subClassOf tmo:OperationalConcept ;
+    rdfs:label "Workflow Cache"@en ;
+    rdfs:comment "Worker memory that caches Workflow state and Event History to avoid full replay on later Workflow Tasks."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:EagerTaskExecution
+    a owl:Class ;
+    rdfs:subClassOf tmo:OperationalConcept ;
+    rdfs:label "Eager Task Execution"@en ;
+    rdfs:comment "A latency optimization that starts eligible Tasks in a local Worker."@en ;
+    dcterms:source <https://docs.temporal.io/develop/worker-performance/> .
+
+tmo:EagerActivityStart
+    a owl:Class ;
+    rdfs:subClassOf tmo:EagerTaskExecution ;
+    rdfs:label "Eager Activity Start"@en ;
+    dcterms:source <https://docs.temporal.io/develop/worker-performance/> .
+
+tmo:EagerWorkflowStart
+    a owl:Class ;
+    rdfs:subClassOf tmo:EagerTaskExecution ;
+    rdfs:label "Eager Workflow Start"@en ;
+    tmo:hasReleaseStage tmo:PublicPreview ;
+    dcterms:source <https://docs.temporal.io/develop/worker-performance/> .
+
+tmo:SlotType
+    a owl:Class ;
+    rdfs:subClassOf tmo:OperationalConcept ;
+    rdfs:label "Slot Type"@en .
+
+tmo:WorkflowTaskSlotType a owl:NamedIndividual , tmo:SlotType ; rdfs:label "Workflow Task slot type"@en .
+tmo:ActivityTaskSlotType a owl:NamedIndividual , tmo:SlotType ; rdfs:label "Activity Task slot type"@en .
+tmo:NexusTaskSlotType a owl:NamedIndividual , tmo:SlotType ; rdfs:label "Nexus Task slot type"@en .
+tmo:LocalActivityTaskSlotType a owl:NamedIndividual , tmo:SlotType ; rdfs:label "Local Activity Task slot type"@en .
+
+tmo:WorkerPerformanceMetric
+    a owl:Class ;
+    rdfs:subClassOf tmo:OperationalConcept ;
+    rdfs:label "Worker Performance Metric"@en ;
+    dcterms:source <https://docs.temporal.io/develop/worker-performance/> .
+
+tmo:BacklogCount a owl:Class ; rdfs:subClassOf tmo:WorkerPerformanceMetric ; rdfs:label "Backlog Count"@en .
+tmo:TaskRate a owl:Class ; rdfs:subClassOf tmo:WorkerPerformanceMetric ; rdfs:label "Task Rate"@en .
+tmo:PollSuccessRate a owl:Class ; rdfs:subClassOf tmo:WorkerPerformanceMetric ; rdfs:label "Poll Success Rate"@en .
+tmo:WorkerAvailability a owl:Class ; rdfs:subClassOf tmo:WorkerPerformanceMetric ; rdfs:label "Worker Availability"@en .
+
+tmo:VersioningStrategy
+    a owl:Class ;
+    rdfs:subClassOf tmo:OperationalConcept ;
+    rdfs:label "Versioning Strategy"@en ;
+    rdfs:comment "A strategy for changing Workflow or Worker code while existing Workflow Executions remain replay-compatible."@en ;
+    dcterms:source <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/versioning.md> ;
+    tmo:agentReference <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/versioning.md> .
+
+tmo:PatchingStrategy
+    a owl:Class ;
+    rdfs:subClassOf tmo:VersioningStrategy ;
+    rdfs:label "Patching Strategy"@en .
+
+tmo:WorkflowTypeVersioningStrategy
+    a owl:Class ;
+    rdfs:subClassOf tmo:VersioningStrategy ;
+    rdfs:label "Workflow Type Versioning Strategy"@en .
+
+tmo:WorkerVersioningStrategy
+    a owl:Class ;
+    rdfs:subClassOf tmo:VersioningStrategy ;
+    rdfs:label "Worker Versioning Strategy"@en .
+
+tmo:WorkerDeployment
+    a owl:Class ;
+    rdfs:subClassOf tmo:OperationalConcept ,
+        [ a owl:Restriction ; owl:onProperty tmo:hasBuildId ; owl:someValuesFrom tmo:BuildId ] ;
+    rdfs:label "Worker Deployment"@en ;
+    rdfs:comment "A logical service grouping used to manage Worker versions."@en ;
+    dcterms:source <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/versioning.md> .
+
+tmo:VersioningBehavior
+    a owl:Class ;
+    rdfs:subClassOf tmo:OperationalConcept ;
+    rdfs:label "Versioning Behavior"@en .
+
+tmo:PinnedVersioningBehavior
+    a owl:NamedIndividual , tmo:VersioningBehavior ;
+    rdfs:label "Pinned"@en ;
+    rdfs:comment "Workflow Executions remain on their original Worker Deployment Version."@en .
+
+tmo:AutoUpgradeVersioningBehavior
+    a owl:NamedIndividual , tmo:VersioningBehavior ;
+    rdfs:label "Auto Upgrade"@en ;
+    rdfs:comment "Workflow Executions may move to a newer Worker Deployment Version at supported boundaries."@en .
+
+tmo:VerificationPractice
+    a owl:Class ;
+    rdfs:subClassOf tmo:OperationalConcept ;
+    rdfs:label "Verification Practice"@en .
+
+tmo:ReplayTest
+    a owl:Class ;
+    rdfs:subClassOf tmo:VerificationPractice ;
+    rdfs:label "Replay Test"@en ;
+    rdfs:comment "A test that replays recorded Event History against Workflow code to check replay compatibility."@en ;
+    dcterms:source <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/determinism.md> .
+
+tmo:Priority
+    a owl:Class ;
+    rdfs:subClassOf tmo:OperationalConcept ;
+    rdfs:label "Task Queue Priority"@en ;
+    rdfs:comment "Task ordering within a Task Queue based on a priority key."@en ;
+    tmo:hasReleaseStage tmo:PublicPreview ;
+    dcterms:source <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/priority-fairness.md> .
+
+tmo:Fairness
+    a owl:Class ;
+    rdfs:subClassOf tmo:OperationalConcept ;
+    rdfs:label "Task Queue Fairness"@en ;
+    rdfs:comment "Dispatch across virtual queues so one workload group cannot monopolize Worker capacity."@en ;
+    tmo:hasReleaseStage tmo:PublicPreview ;
+    dcterms:source <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/priority-fairness.md> .
+
+tmo:ReleaseStage
+    a owl:Class ;
+    rdfs:subClassOf tmo:OperationalConcept ;
+    rdfs:label "Release Stage"@en .
+
+tmo:GeneralAvailability
+    a owl:NamedIndividual , tmo:ReleaseStage ;
+    rdfs:label "General Availability"@en .
+
+tmo:PublicPreview
+    a owl:NamedIndividual , tmo:ReleaseStage ;
+    rdfs:label "Public Preview"@en .
+
+#################################################################
+# Ambiguous convenience terms
+#################################################################
+
+tmo:WorkflowTerm
+    a owl:NamedIndividual , tmo:AmbiguousTerm ;
+    rdfs:label "Workflow"@en ;
+    tmo:mayDenote tmo:WorkflowDefinition , tmo:WorkflowExecution , tmo:WorkflowType ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:ActivityTerm
+    a owl:NamedIndividual , tmo:AmbiguousTerm ;
+    rdfs:label "Activity"@en ;
+    tmo:mayDenote tmo:ActivityDefinition , tmo:ActivityExecution , tmo:ActivityType ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:WorkerTerm
+    a owl:NamedIndividual , tmo:AmbiguousTerm ;
+    rdfs:label "Worker"@en ;
+    tmo:mayDenote tmo:WorkerProgram , tmo:WorkerProcess ;
+    tmo:scopeNote "Use Worker Entity when the individual Worker inside a Worker Process is intended."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> .
+
+tmo:DeprecatedTerm
+    a owl:Class ;
+    rdfs:subClassOf tmo:AmbiguousTerm ;
+    rdfs:label "Deprecated Term"@en .
+
+tmo:TemporalClusterTerm
+    a owl:NamedIndividual , tmo:DeprecatedTerm ;
+    rdfs:label "Temporal Cluster"@en ;
+    tmo:mayDenote tmo:TemporalService ;
+    tmo:scopeNote "Prefer Temporal Service. The Temporal glossary records Temporal Cluster as a term being phased out."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> ,
+        <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/SKILL.md> .
+
+tmo:ActivityImplementationTerm
+    a owl:NamedIndividual , tmo:AmbiguousTerm ;
+    rdfs:label "Activity Implementation"@en ;
+    tmo:mayDenote tmo:ActivityDefinition ;
+    tmo:scopeNote "Use Activity Definition when referring to the registered Temporal concept."@en ;
+    dcterms:source <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/SKILL.md> .
+
+tmo:SideEffectTerm
+    a owl:NamedIndividual , tmo:AmbiguousTerm ;
+    rdfs:label "Side Effect"@en ;
+    tmo:mayDenote tmo:RecordedSideEffect , tmo:ExternalEffect ;
+    tmo:scopeNote "Distinguish Temporal's recorded Side Effect mechanism from an external business or infrastructure effect."@en ;
+    dcterms:source <https://docs.temporal.io/glossary> ,
+        <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/gotchas.md> .
+
+#################################################################
+# Design-pattern category classes
+#################################################################
+
+tmo:TaskOrchestrationPattern a owl:Class ; rdfs:subClassOf tmo:DesignPattern ; rdfs:label "Task Orchestration Pattern"@en .
+tmo:WorkflowMessagingPattern a owl:Class ; rdfs:subClassOf tmo:DesignPattern ; rdfs:label "Workflow Messaging Pattern"@en .
+tmo:EntityLifecyclePattern a owl:Class ; rdfs:subClassOf tmo:DesignPattern ; rdfs:label "Entity and Lifecycle Pattern"@en .
+tmo:ExternalInteractionPattern a owl:Class ; rdfs:subClassOf tmo:DesignPattern ; rdfs:label "External Interaction Pattern"@en .
+tmo:DistributedTransactionPattern a owl:Class ; rdfs:subClassOf tmo:DesignPattern ; rdfs:label "Distributed Transaction Pattern"@en .
+tmo:ErrorHandlingRetryPattern a owl:Class ; rdfs:subClassOf tmo:DesignPattern ; rdfs:label "Error Handling and Retry Pattern"@en .
+tmo:BatchProcessingPattern a owl:Class ; rdfs:subClassOf tmo:DesignPattern ; rdfs:label "Batch Processing Pattern"@en .
+tmo:QoSThroughputPattern a owl:Class ; rdfs:subClassOf tmo:DesignPattern ; rdfs:label "QoS and Throughput Pattern"@en .
+tmo:PerformanceLatencyPattern a owl:Class ; rdfs:subClassOf tmo:DesignPattern ; rdfs:label "Performance and Latency Pattern"@en .
+tmo:WorkerConfigurationPattern a owl:Class ; rdfs:subClassOf tmo:DesignPattern ; rdfs:label "Worker Configuration Pattern"@en .
+tmo:AIApplicationPattern a owl:Class ; rdfs:subClassOf tmo:DesignPattern ; rdfs:label "AI Application Pattern"@en ; dcterms:source <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/ai-patterns.md> .
+
+#################################################################
+# Design-pattern catalog individuals
+#################################################################
+
+tmo:ChildWorkflowsPattern a owl:NamedIndividual , tmo:TaskOrchestrationPattern ; rdfs:label "Child Workflows"@en ; tmo:usesPrimitive tmo:WorkflowExecution , tmo:WorkflowId , tmo:EventHistory ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/child-workflows> .
+tmo:ParallelExecutionPattern a owl:NamedIndividual , tmo:TaskOrchestrationPattern ; rdfs:label "Parallel Execution"@en ; tmo:usesPrimitive tmo:ActivityExecution ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/parallel-execution> .
+tmo:PickFirstPattern a owl:NamedIndividual , tmo:TaskOrchestrationPattern ; rdfs:label "Pick First (Race)"@en ; tmo:usesPrimitive tmo:ActivityExecution ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/pick-first> .
+
+tmo:SignalWithStartPattern a owl:NamedIndividual , tmo:WorkflowMessagingPattern ; rdfs:label "Signal with Start"@en ; tmo:usesPrimitive tmo:SignalWithStart ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/signal-with-start> .
+tmo:RequestResponseUpdatesPattern a owl:NamedIndividual , tmo:WorkflowMessagingPattern ; rdfs:label "Request-Response via Updates"@en ; tmo:usesPrimitive tmo:Update ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/request-response-via-updates> .
+
+tmo:EntityWorkflowPattern a owl:NamedIndividual , tmo:EntityLifecyclePattern ; rdfs:label "Entity Workflow"@en ; tmo:usesPrimitive tmo:WorkflowExecution , tmo:Signal , tmo:Update ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/entity-workflow> .
+tmo:ContinueAsNewPattern a owl:NamedIndividual , tmo:EntityLifecyclePattern ; rdfs:label "Continue-As-New"@en ; tmo:usesPrimitive tmo:ContinueAsNew , tmo:EventHistory ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/continue-as-new> .
+tmo:UpdatableTimerPattern a owl:NamedIndividual , tmo:EntityLifecyclePattern ; rdfs:label "Updatable Timer"@en ; tmo:usesPrimitive tmo:Signal , tmo:Update ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/updatable-timer> .
+
+tmo:PollingExternalServicesPattern a owl:NamedIndividual , tmo:ExternalInteractionPattern ; rdfs:label "Polling External Services"@en ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/polling> .
+tmo:LongRunningActivityPattern a owl:NamedIndividual , tmo:ExternalInteractionPattern ; rdfs:label "Long-Running Activity"@en ; tmo:usesPrimitive tmo:ActivityExecution , tmo:ActivityHeartbeat ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/long-running-activity> .
+tmo:DelayedStartPattern a owl:NamedIndividual , tmo:ExternalInteractionPattern ; rdfs:label "Delayed Start"@en ; tmo:usesPrimitive tmo:WorkflowExecution ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/delayed-start> .
+tmo:DelayedCallbackPattern a owl:NamedIndividual , tmo:ExternalInteractionPattern ; rdfs:label "Delayed Callback (Webhooks)"@en ; tmo:usesPrimitive tmo:Signal , tmo:AsynchronousActivityCompletion , tmo:TaskToken ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/delayed-callback> .
+tmo:ApprovalPattern a owl:NamedIndividual , tmo:ExternalInteractionPattern ; rdfs:label "Approval"@en ; tmo:usesPrimitive tmo:Signal ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/approval> .
+
+tmo:SagaPattern a owl:NamedIndividual , tmo:DistributedTransactionPattern ; rdfs:label "Saga Pattern"@en ; tmo:usesPrimitive tmo:ActivityExecution ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/saga-pattern> .
+tmo:EarlyReturnPattern a owl:NamedIndividual , tmo:DistributedTransactionPattern ; rdfs:label "Early Return"@en ; tmo:usesPrimitive tmo:Update ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/early-return> .
+
+tmo:FixedCountRetriesPattern a owl:NamedIndividual , tmo:ErrorHandlingRetryPattern ; rdfs:label "Fixed Count of Retries"@en ; tmo:usesPrimitive tmo:RetryPolicy ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/fixed-count-retries> .
+tmo:FixedWallTimeRetriesPattern a owl:NamedIndividual , tmo:ErrorHandlingRetryPattern ; rdfs:label "Fixed Wall-Time Retries"@en ; tmo:usesPrimitive tmo:RetryPolicy , tmo:Timeout ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/fixed-wall-time-retries> .
+tmo:NonRetryableErrorsPattern a owl:NamedIndividual , tmo:ErrorHandlingRetryPattern ; rdfs:label "Non-Retryable Errors"@en ; tmo:usesPrimitive tmo:RetryPolicy ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/non-retryable-errors> .
+tmo:DelayedRetryPattern a owl:NamedIndividual , tmo:ErrorHandlingRetryPattern ; rdfs:label "Delayed Retry"@en ; tmo:usesPrimitive tmo:RetryPolicy ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/delayed-retry> .
+tmo:FastSlowRetriesPattern a owl:NamedIndividual , tmo:ErrorHandlingRetryPattern ; rdfs:label "Fast/Slow Retries"@en ; tmo:usesPrimitive tmo:RetryPolicy ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/fast-slow-retries> .
+tmo:RetryAlertingMetricsPattern a owl:NamedIndividual , tmo:ErrorHandlingRetryPattern ; rdfs:label "Retry Alerting via Metrics"@en ; tmo:usesPrimitive tmo:ActivityExecution , tmo:RetryPolicy ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/retry-metrics> .
+tmo:ResumableActivityPattern a owl:NamedIndividual , tmo:ErrorHandlingRetryPattern ; rdfs:label "Resumable Activity"@en ; tmo:usesPrimitive tmo:ActivityExecution , tmo:Signal ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/resumable-activity> .
+
+tmo:FanOutChildWorkflowsPattern a owl:NamedIndividual , tmo:BatchProcessingPattern ; rdfs:label "Fan-Out with Child Workflows"@en ; tmo:usesPrimitive tmo:WorkflowExecution ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/fanout-child-workflows> .
+tmo:BatchIteratorPattern a owl:NamedIndividual , tmo:BatchProcessingPattern ; rdfs:label "Batch Iterator"@en ; tmo:usesPrimitive tmo:ContinueAsNew ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/batch-iterator> .
+tmo:SlidingWindowPattern a owl:NamedIndividual , tmo:BatchProcessingPattern ; rdfs:label "Sliding Window"@en ; tmo:usesPrimitive tmo:WorkflowExecution ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/sliding-window> .
+tmo:MapReduceTreePattern a owl:NamedIndividual , tmo:BatchProcessingPattern ; rdfs:label "MapReduce Tree"@en ; tmo:usesPrimitive tmo:WorkflowExecution ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/mapreduce-tree> .
+
+tmo:DownstreamRateLimitingPattern a owl:NamedIndividual , tmo:QoSThroughputPattern ; rdfs:label "Downstream Rate Limiting"@en ; tmo:usesPrimitive tmo:ActivityExecution , tmo:TaskQueue , tmo:WorkerProcess ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/downstream-rate-limiting> .
+tmo:PriorityTaskQueuesPattern a owl:NamedIndividual , tmo:QoSThroughputPattern ; rdfs:label "Priority Task Queues"@en ; tmo:usesPrimitive tmo:TaskQueue ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/priority-task-queues> .
+tmo:FairnessPattern a owl:NamedIndividual , tmo:QoSThroughputPattern ; rdfs:label "Fairness"@en ; tmo:usesPrimitive tmo:WorkerTaskSlot ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/fairness> .
+
+tmo:LocalActivitiesPattern a owl:NamedIndividual , tmo:PerformanceLatencyPattern ; rdfs:label "Local Activities"@en ; tmo:usesPrimitive tmo:LocalActivityTask , tmo:WorkflowTask ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/local-activities> .
+tmo:EarlyReturnLocalActivitiesPattern a owl:NamedIndividual , tmo:PerformanceLatencyPattern ; rdfs:label "Early Return with Local Activities"@en ; tmo:usesPrimitive tmo:Update , tmo:LocalActivityTask ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/early-return-local-activities> .
+tmo:EagerWorkflowStartPattern a owl:NamedIndividual , tmo:PerformanceLatencyPattern ; rdfs:label "Eager Workflow Start"@en ; tmo:usesPrimitive tmo:EagerWorkflowStart , tmo:WorkflowTask , tmo:WorkerTaskSlot ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/eager-workflow-start> .
+
+tmo:WorkerSpecificTaskQueuesPattern a owl:NamedIndividual , tmo:WorkerConfigurationPattern ; rdfs:label "Worker-Specific Task Queues"@en ; tmo:usesPrimitive tmo:TaskQueue , tmo:WorkerProcess ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/worker-specific-taskqueue> .
+tmo:ActivityDependencyInjectionPattern a owl:NamedIndividual , tmo:WorkerConfigurationPattern ; rdfs:label "Activity Dependency Injection"@en ; tmo:usesPrimitive tmo:ActivityDefinition , tmo:WorkerProgram ; rdfs:seeAlso <https://docs.temporal.io/design-patterns/activity-dependency-injection> .
+
+tmo:LLMCallsInActivitiesPattern
+    a owl:NamedIndividual , tmo:AIApplicationPattern ;
+    rdfs:label "LLM Calls in Activities"@en ;
+    tmo:usesPrimitive tmo:ActivityDefinition , tmo:RetryPolicy ;
+    dcterms:source <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/ai-patterns.md> .
+
+tmo:NondeterministicToolsInActivitiesPattern
+    a owl:NamedIndividual , tmo:AIApplicationPattern ;
+    rdfs:label "Non-Deterministic Tools in Activities"@en ;
+    tmo:usesPrimitive tmo:ActivityDefinition , tmo:ExternalEffect ;
+    dcterms:source <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/ai-patterns.md> .
+
+tmo:DeterministicAgentStateInWorkflowPattern
+    a owl:NamedIndividual , tmo:AIApplicationPattern ;
+    rdfs:label "Deterministic Agent State in Workflow"@en ;
+    tmo:usesPrimitive tmo:WorkflowDefinition , tmo:WorkflowDeterminism ;
+    dcterms:source <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/ai-patterns.md> .
+
+tmo:CentralizedActivityRetryPattern
+    a owl:NamedIndividual , tmo:AIApplicationPattern ;
+    rdfs:label "Centralized Activity Retry Management"@en ;
+    tmo:usesPrimitive tmo:ActivityExecution , tmo:RetryPolicy ;
+    dcterms:source <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/ai-patterns.md> .
+
+tmo:MultiAgentOrchestrationPattern
+    a owl:NamedIndividual , tmo:AIApplicationPattern ;
+    rdfs:label "Multi-Agent Orchestration"@en ;
+    tmo:usesPrimitive tmo:WorkflowExecution , tmo:ActivityExecution , tmo:ParallelExecutionPattern ;
+    dcterms:source <https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/ai-patterns.md> .

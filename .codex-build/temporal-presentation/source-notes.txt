@@ -1,0 +1,31 @@
+Communication job
+By the end, a Temporal interview audience should understand why the same multi-agent workload fails under process-owned orchestration and recovers under history-owned orchestration, because Temporal gives the execution tree a durable identity while the application keeps responsibility for external state and safe effects.
+
+Primary workspace sources
+- /Users/richardmoot/Projects/temporal-interview-two/docs/how-it-works.md
+- /Users/richardmoot/Projects/temporal-interview-two/docs/architecture.md
+- /Users/richardmoot/Projects/temporal-interview-two/docs/talk-track.md
+- /Users/richardmoot/Projects/temporal-interview-two/docs/verification.md
+- /Users/richardmoot/Projects/temporal-interview-two/src/temporal/workflows.ts
+- /Users/richardmoot/Projects/temporal-interview-two/src/temporal/activities.ts
+- /Users/richardmoot/Projects/temporal-interview-two/src/supervisor/fleet-supervisor.ts
+- /Users/richardmoot/Projects/temporal-interview-two/src/shared/run-snapshot.ts
+- /Users/richardmoot/Projects/temporal-interview-two/fixture/src/retry.ts
+- /Users/richardmoot/Projects/temporal-interview-two/fixture/tests/retry-limit.test.ts
+
+Visual evidence
+- /Users/richardmoot/Projects/temporal-interview-two/output/playwright/baseline-killed.png
+- /Users/richardmoot/Projects/temporal-interview-two/output/playwright/temporal-recovered.png
+
+Verified in this session
+- npm run check: passed
+- npm run build: passed
+- npm test: 10 test files and 29 tests passed
+- Playwright browser proof: 1 scenario passed on an isolated server
+
+Official supporting references
+- https://docs.temporal.io/encyclopedia/event-history
+- https://docs.temporal.io/workflows#how-workflow-replay-works
+- https://docs.temporal.io/activities
+- https://docs.temporal.io/encyclopedia/detecting-activity-failures#activity-heartbeat
+- https://docs.temporal.io/activity-execution

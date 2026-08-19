@@ -3,7 +3,10 @@ import path from 'node:path';
 import express from 'express';
 
 import type { DemoMode, RunnerMode } from '../shared/run-snapshot.js';
-import { FleetSupervisor } from '../supervisor/fleet-supervisor.js';
+import {
+  ensureTemporalReachable,
+  FleetSupervisor,
+} from '../supervisor/fleet-supervisor.js';
 
 const app = express();
 const supervisor = new FleetSupervisor();
@@ -12,9 +15,11 @@ const port = Number.parseInt(process.env.PORT ?? '8787', 10);
 app.use(express.json());
 
 app.get('/api/preflight', async (_request, response) => {
+  const temporalAddress = process.env.TEMPORAL_ADDRESS ?? 'localhost:7233';
   response.json({
     codexLogin: await codexLoginStatus(),
-    temporalAddress: process.env.TEMPORAL_ADDRESS ?? 'localhost:7233',
+    temporalAddress,
+    temporalReachable: await temporalReachable(temporalAddress),
   });
 });
 
@@ -84,9 +89,19 @@ async function codexLoginStatus(): Promise<string> {
   const { execFile } = await import('node:child_process');
   return new Promise((resolve) => {
     execFile('codex', ['login', 'status'], (error, stdout, stderr) => {
-      resolve(error ? stderr.trim() || error.message : stdout.trim());
+      const output = `${stdout}${stderr}`.trim();
+      resolve(error ? output || error.message : output);
     });
   });
+}
+
+async function temporalReachable(address: string): Promise<boolean> {
+  try {
+    await ensureTemporalReachable(address);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function parseMode(value: unknown): DemoMode {
