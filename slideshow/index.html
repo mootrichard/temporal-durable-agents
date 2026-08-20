@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Orchestrator Died. The Work Didn’t.</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%235e5ce6'/%3E%3C/svg%3E" />
+    <script src="vendor/hyperframes-player.global.js"></script>
+    <script src="vendor/hyperframes-slideshow.global.js"></script>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #f7f7fa;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+      }
+
+      hyperframes-slideshow {
+        display: block;
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+      }
+
+      hyperframes-player {
+        position: absolute;
+        inset: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <hyperframes-slideshow
+      tabindex="0"
+      notes-storage-key="durable-agent-tree-interview-deck"
+    >
+      <hyperframes-player interactive src="composition/index.html"></hyperframes-player>
+
+    <script type="application/hyperframes-slideshow+json">
+      {
+        "slides": [
+          { "sceneId": "cover", "notes": "Open on the thesis, then set the contract for this version: we will follow the actual TypeScript call path. The audience will see which process runs each line, which facts reach Temporal, and exactly what replacement compute reconstructs." },
+          { "sceneId": "same-job", "notes": "The task stays fixed: plan, two read-only investigations, initial tests, one implementation turn, final tests, and a Git diff. This isolates the architectural variable: who owns the continuation when compute disappears." },
+          { "sceneId": "trace-topology", "notes": "Establish the failure boundary before reading code. Browser, API supervisor, and Temporal Service survive. The detached Worker group contains Workflow and Activity execution plus Codex and Vitest subprocesses. The Git workspace persists on disk outside process memory." },
+          { "sceneId": "trace-api", "notes": "Trace src/server/main.ts lines 26–30. The API validates mode and runner mode, then delegates lifecycle work to FleetSupervisor.start. The HTTP response is the supervisor's initial UI snapshot, not the Workflow result." },
+          { "sceneId": "trace-start", "notes": "Trace src/supervisor/fleet-supervisor.ts lines 48–72. The supervisor verifies Temporal, creates a run workspace, starts FixWorkflow with workflowId equal to runId, and only then launches Worker compute. A Workflow can exist durably before a poller is available." },
+          { "sceneId": "trace-worker", "notes": "The client and Worker rendezvous on the same run-specific Task Queue. worker.ts loads Workflow code and Activities. maxCachedWorkflows is zero so the demo continually exercises history-based reconstruction. The 500 millisecond heartbeat throttle improves live trace visibility." },
+          { "sceneId": "trace-state", "notes": "FixWorkflow begins with an ordinary local snapshot variable. Deterministic Workflow code recreates it from Event History; Temporal does not restore a JavaScript heap. applyRunEvent is the state reducer, and snapshotQuery can be served only while Worker compute is present." },
+          { "sceneId": "trace-policy", "notes": "The Activity proxy applies a ten-minute attempt bound, a twenty-second heartbeat timeout, and up to five attempts with one-to-ten-second backoff. The heartbeat timeout is the failure detector used after SIGKILL." },
+          { "sceneId": "trace-checkpoint", "notes": "Trace runCodexTurn in activities.ts lines 23–36. A new attempt reads Context.info.heartbeatDetails. Its thread ID takes precedence over the original input. The Activity resumes the local session when possible and starts a replacement only for a recognized unavailable-session error." },
+          { "sceneId": "trace-codex", "notes": "LiveCodexRunner chooses resumeThread or startThread and consumes streamed events. thread.started produces the resumable session ID; item events update progress and lastItemId; turn.completed provides usage. Temporal sees this stream through heartbeat details and the final Activity result." },
+          { "sceneId": "trace-heartbeat", "notes": "Reveal the three heartbeat paths. The five-second lease repeats current payload during quiet model time. Checkpoints immediately write threadId and lastItemId. Progress immediately writes the latest normalized trace event. A heartbeat means liveness and checkpoint state; completion is a separate event.", "fragments": [136.7, 138.2, 139.8] },
+          { "sceneId": "trace-plan", "notes": "The planner Activity completes before the JSON plan is parsed. Its response, thread ID, trace, and usage become a recorded Activity result. During replay, the SDK supplies that result instead of calling Codex again." },
+          { "sceneId": "trace-fanout", "notes": "Reveal all three branches. Two executeChild calls create stable Child Workflow IDs. runTests creates the third branch as an Activity. All three start before Promise.all waits, so Worker capacity can run them concurrently.", "fragments": [148.7, 150.2, 151.8] },
+          { "sceneId": "trace-child", "notes": "SubagentWorkflow is intentionally small. executeChild and the stable Workflow ID provide durable branch identity; runCodexTurn remains an Activity because the model call is external and nondeterministic. REQUEST_CANCEL activates if the parent closes, while Worker loss leaves the parent open." },
+          { "sceneId": "trace-tests", "notes": "The test Activity reads heartbeatDetails as a list of completed filenames. runCheckpointedTests turns that list into a set, skips recorded files, and heartbeats a copied list after every passing file." },
+          { "sceneId": "trace-barrier", "notes": "The .then handlers deterministically mark a branch complete and record its returned trace before the promise reaches Promise.all. Completion order can vary. Implementation begins only when both Child results and the initial test result exist." },
+          { "sceneId": "trace-projection", "notes": "This is the subtle UI path. The waiting Workflow cannot consume an in-flight Activity heartbeat as a result. The supervisor describes the parent plus both Child Workflow IDs, decodes pending heartbeat details, and overlays progress onto its cached RunSnapshot. The projection is visibility outside Workflow state." },
+          { "sceneId": "trace-kill", "notes": "FleetSupervisor.kill sends SIGKILL to the exact detached process group, clears the PID target, refreshes pending Temporal progress, and freezes the cached screen. Running nodes become interrupted in the projection. No cancel or terminate command reaches Temporal." },
+          { "sceneId": "trace-survive", "notes": "Separate physical death from logical state. The Worker, Workflow isolate, Activity stacks, Codex processes, Vitest processes, and JavaScript heap disappear. Workflow ID, Event History, recorded results, delivered heartbeat details, Git workspace, and the API snapshot remain." },
+          { "sceneId": "trace-timeout", "notes": "A replacement Worker can poll immediately, but the interrupted Activity remains assigned until the server detects twenty seconds without heartbeat. Then the retry policy makes attempt two eligible after backoff. Durable recovery has an explicit failure-detection interval." },
+          { "sceneId": "trace-restart", "notes": "FleetSupervisor.restart keeps the same managed run, workspace, Workflow ID, and Task Queue. It only marks the cached UI online and spawns another worker.ts process. The baseline path instead recreates the workspace and initial snapshot." },
+          { "sceneId": "trace-replay", "notes": "Walk the table row by row. FixWorkflow executes again from the top. Commands must match Event History. Completed Activities and Child Workflows replay as recorded values. An interrupted Activity lacks a completion event, so Temporal schedules another attempt. Use the hotspot for the Event History microscope.", "hotspots": [{ "id": "history-hotspot", "label": "Open the Event History microscope", "target": "event-history", "region": { "x": 5, "y": 84, "w": 29, "h": 9 } }] },
+          { "sceneId": "trace-codex-retry", "notes": "Attempt two receives the most recently delivered heartbeat in Context.info.heartbeatDetails. It calls resumeThread and submits the durable assignment as a new turn. This restores conversation context rather than an interrupted token stream. Missing local session state triggers the replacement-thread fallback." },
+          { "sceneId": "trace-test-retry", "notes": "Attempt two restores the completed filename list and skips matching tests. A file whose heartbeat reached the server executes once across replacement. A locally passed file whose heartbeat was lost can run again, which is acceptable for this test effect and part of the stated guarantee boundary." },
+          { "sceneId": "trace-implementation", "notes": "After the barrier, the parent schedules the implementer with the validated plan, both Child results, initial test output, the existing workspace, workspace-write access, and the planner's recorded thread ID. The coordinator continues the same conversation with gathered evidence." },
+          { "sceneId": "trace-completion", "notes": "The final test Activity verifies all four files, then getDiff reads the isolated Git workspace. The Workflow emits one complete RunSnapshot containing the summary and diff. That result is the durable completion receipt shown in the interface." },
+          { "sceneId": "trace-proof", "notes": "Show executable evidence. One integration test proves that a completed child runs once, an interrupted child runs twice, the heartbeated thread ID is resumed, and the Workflow completes. A second proves that every checkpointed final-phase test file executes once across Worker replacement." },
+          { "sceneId": "boundary", "notes": "Draw the boundary precisely. Temporal owns Workflow identity, Event History, replay, timeouts, retries, and recorded results. Application code owns idempotency, reconciliation, durable artifact storage, safe external effects, and model correctness." },
+          { "sceneId": "close", "notes": "Close with the interview answer: a Worker is replaceable compute. Event History owns the durable continuation. Heartbeats carry application-defined progress into later Activity attempts. Side-effect safety remains explicitly application-owned." }
+        ],
+        "slideSequences": [
+          { "id": "event-history", "label": "Event History microscope", "slides": [
+            { "sceneId": "trace-history-events", "notes": "The parent Event History records Workflow start, Activity schedules and completions, Child Workflow initiation and completion, retry timing, and Workflow completion. It does not serialize the Node.js heap, Codex transcript, or Git files." },
+            { "sceneId": "trace-heartbeat-semantics", "notes": "Heartbeat detail belongs to the pending Activity. Describe and a later attempt can read it; the Workflow cannot read it while the Activity runs. Activity completion is a separate durable event that replay can reuse." }
+          ] }
+        ]
+      }
+    </script>
+    </hyperframes-slideshow>
+  </body>
+</html>

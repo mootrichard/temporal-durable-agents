@@ -1,0 +1,10 @@
+{
+  "name": "durable-agent-tree-slideshow",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "present": "npx hyperframes present ./composition",
+    "check": "npx hyperframes check ./composition",
+    "snapshot": "npx hyperframes snapshot ./composition --frames 11"
+  }
+}
