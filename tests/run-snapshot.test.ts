@@ -122,4 +122,19 @@ describe('run snapshot', () => {
       showRunnerChoice: false,
     });
   });
+
+  it('offers a new run after a Temporal run completes with workers online', () => {
+    const completed = applyRunEvent(
+      createInitialSnapshot('run-1', 'temporal', 'live'),
+      { type: 'complete', summary: 'Fixed and verified', diff: '+ fix' },
+    );
+
+    expect(deriveRunControlState(completed)).toMatchObject({
+      action: 'start-new',
+      actionLabel: 'Start new run',
+      runActive: false,
+      runFinished: true,
+      showRunnerChoice: true,
+    });
+  });
 });

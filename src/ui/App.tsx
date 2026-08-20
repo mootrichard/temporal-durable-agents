@@ -12,10 +12,11 @@ import {
   PlayCircleIcon,
   PlayIcon,
   StopIcon,
+  TerminalWindowIcon,
   TestTubeIcon,
   XCircleIcon,
 } from '@phosphor-icons/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   createInitialSnapshot,
@@ -30,6 +31,8 @@ import {
   deriveRunControlState,
   isCodexLoginReady,
 } from './run-control-state.js';
+
+const AgentConsole = lazy(() => import('./AgentConsole.js'));
 
 type Snapshots = Partial<Record<DemoMode, RunSnapshot>>;
 type Preflight = {
@@ -55,7 +58,13 @@ export function App() {
   const [selectedNodeId, setSelectedNodeId] = useState<RunNode['id']>('test-investigator');
   const [historyOpen, setHistoryOpen] = useState(false);
   const [confirmKill, setConfirmKill] = useState(false);
+  const [consoleOpen, setConsoleOpen] = useState(false);
   const actionInFlight = useRef(false);
+  const fleetActionRef = useRef<HTMLButtonElement>(null);
+  const keepRunningRef = useRef<HTMLButtonElement>(null);
+  const restoreFleetFocus = useRef(false);
+  const consoleLaunchRef = useRef<HTMLButtonElement>(null);
+  const restoreConsoleFocus = useRef(false);
   const snapshot = snapshots[mode] ?? createInitialSnapshot('preview', mode, runnerMode);
   const { action, actionLabel, runActive, showRunnerChoice } = deriveRunControlState(snapshot);
   const selectedNode = snapshot.nodes.find(({ id }) => id === selectedNodeId) ?? snapshot.nodes[0]!;
@@ -101,6 +110,29 @@ export function App() {
     return () => window.removeEventListener('keydown', closeOnEscape);
   }, [confirmKill]);
 
+  useEffect(() => {
+    if (consoleOpen) {
+      restoreConsoleFocus.current = true;
+      return;
+    }
+    if (restoreConsoleFocus.current) {
+      restoreConsoleFocus.current = false;
+      consoleLaunchRef.current?.focus();
+    }
+  }, [consoleOpen]);
+
+  useEffect(() => {
+    if (confirmKill) {
+      restoreFleetFocus.current = true;
+      const frame = window.requestAnimationFrame(() => keepRunningRef.current?.focus());
+      return () => window.cancelAnimationFrame(frame);
+    }
+    if (restoreFleetFocus.current) {
+      restoreFleetFocus.current = false;
+      fleetActionRef.current?.focus();
+    }
+  }, [confirmKill]);
+
   const codexReady = preflight === undefined
     ? undefined
     : isCodexLoginReady(preflight.codexLogin);
@@ -119,6 +151,7 @@ export function App() {
     setMode(nextMode);
     setHistoryOpen(false);
     setConfirmKill(false);
+    setConsoleOpen(false);
   }
 
   async function start(): Promise<void> {
@@ -129,6 +162,7 @@ export function App() {
       });
       setSnapshots((existing) => ({ ...existing, [mode]: created }));
       setHistoryOpen(false);
+      setConsoleOpen(false);
     });
   }
 
@@ -239,6 +273,7 @@ export function App() {
             </div>
           )}
           <button
+            ref={fleetActionRef}
             data-testid="fleet-action"
             className={`fleet-action ${runActive ? 'danger' : ''}`}
             disabled={busy || (action !== 'kill' && !runtimeReady)}
@@ -248,6 +283,21 @@ export function App() {
             <ActionIcon actionLabel={actionLabel} />
             {busy ? 'Working…' : actionLabel}
           </button>
+          {snapshot.runId !== 'preview' && (
+            <button
+              ref={consoleLaunchRef}
+              aria-label="Open agent consoles"
+              className="console-launch"
+              onClick={() => {
+                setConfirmKill(false);
+                setConsoleOpen(true);
+              }}
+              type="button"
+            >
+              <TerminalWindowIcon aria-hidden="true" weight="bold" />
+              Agent consoles
+            </button>
+          )}
         </div>
       </header>
 
@@ -305,9 +355,22 @@ export function App() {
 
       </div>
 
-      {confirmKill && (
-        <div className="dialog-backdrop">
-          <section aria-describedby="stop-description" aria-labelledby="stop-title" aria-modal="true" className="stop-dialog" role="dialog">
+      {consoleOpen && (
+        <Suspense fallback={(
+          <div className="agent-console-backdrop">
+            <div className="agent-console-loading" role="status">Opening agent consoles…</div>
+          </div>
+        )}>
+          <AgentConsole onClose={() => setConsoleOpen(false)} snapshot={snapshot} />
+        </Suspense>
+      )}
+
+      <div
+        aria-hidden={!confirmKill}
+        className={`dialog-backdrop ${confirmKill ? 'is-open' : ''}`}
+        inert={!confirmKill}
+      >
+          <section aria-describedby="stop-description" aria-labelledby="stop-title" aria-modal={confirmKill ? 'true' : undefined} className="stop-dialog" role="dialog">
             <span className="dialog-icon" aria-hidden="true"><StopIcon weight="fill" /></span>
             <h2 id="stop-title">Stop every worker?</h2>
             <p id="stop-description">
@@ -318,12 +381,11 @@ export function App() {
                 : 'The baseline stores this run in process memory. Stopping the workers clears its in-flight progress.'}
             </p>
             <div className="dialog-actions">
-              <button className="secondary-action" onClick={() => setConfirmKill(false)} type="button">Keep running</button>
+              <button ref={keepRunningRef} className="secondary-action" onClick={() => setConfirmKill(false)} type="button">Keep running</button>
               <button className="danger-action" data-testid="confirm-fleet-stop" onClick={() => void confirmFleetKill()} type="button">Stop workers</button>
             </div>
           </section>
         </div>
-      )}
     </main>
   );
 }
@@ -410,7 +472,7 @@ function WorkerNode({
           <div className="checkpoint-card">
             <span>Test checkpoint</span>
             <strong data-testid="test-progress">{snapshot.metrics.completedTests} / {snapshot.metrics.totalTests}</strong>
-            <div className="progress-track" aria-hidden="true"><i style={{ width: `${progress}%` }} /></div>
+            <div className="progress-track" aria-hidden="true"><i style={{ transform: `scaleX(${progress / 100})` }} /></div>
             <small>{checkpointCopy(snapshot)}</small>
           </div>
         </div>

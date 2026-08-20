@@ -17,3 +17,6 @@ test-results/
 
 *.log
 .DS_Store
+
+# Personal interview preparation documents.
+*-developer-advocate-*.md
