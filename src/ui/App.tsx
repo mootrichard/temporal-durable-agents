@@ -472,7 +472,7 @@ function WorkerNode({
           <div className="checkpoint-card">
             <span>Test checkpoint</span>
             <strong data-testid="test-progress">{snapshot.metrics.completedTests} / {snapshot.metrics.totalTests}</strong>
-            <div className="progress-track" aria-hidden="true"><i style={{ width: `${progress}%` }} /></div>
+            <div className="progress-track" aria-hidden="true"><i style={{ transform: `scaleX(${progress / 100})` }} /></div>
             <small>{checkpointCopy(snapshot)}</small>
           </div>
         </div>

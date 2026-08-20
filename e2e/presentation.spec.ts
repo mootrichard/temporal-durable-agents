@@ -24,7 +24,8 @@ test('contrasts lost process state with a recovered Temporal execution tree', as
   await page.getByTestId('confirm-fleet-stop').click();
   expect((await (await baselineKill).json()).phase).toBe('interrupted');
   await expect(page.getByTestId('frozen-snapshot')).toContainText('Memory is gone.');
-  const baselineLegacyStyle = await page.addStyleTag({ content: '.console-launch { display: none !important; }' });
+  await expect(page.getByRole('dialog', { name: 'Stop every worker?' })).toBeHidden();
+  const baselineLegacyStyle = await page.addStyleTag({ content: '.console-launch, .dialog-backdrop { display: none !important; }' });
   await page.screenshot({ path: 'output/playwright/baseline-killed.png' });
   await baselineLegacyStyle.evaluate((element) => element.remove());
 

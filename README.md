@@ -5,9 +5,11 @@ execution tree can outlive its operating-system process tree.
 
 The same small TypeScript retry bug runs twice. Act I coordinates Codex turns and tests with promises inside one killable process group. Act II stores coordination in a Temporal Workflow, delegates investigations to Child Workflows, and checkpoints external work through Activity heartbeats. Kill every Worker and Codex/test subprocess; restart the fleet; the durable tree continues.
 
-The browser demo shows the failure and recovery as they happen. The HyperFrames
-slideshow follows the implementation from the API request through Workflow
-replay, with presenter notes for a detailed Temporal code walkthrough.
+The browser demo shows the failure and recovery as they happen. A read-only,
+four-pane agent console uses xterm.js to display the coordinator, two
+investigators, and test runner as they work. The HyperFrames slideshow follows
+the implementation from the API request through Workflow replay, with presenter
+notes for a detailed Temporal code walkthrough.
 
 ![The recovered Temporal execution tree](output/playwright/temporal-recovered.png)
 
@@ -29,6 +31,35 @@ Open [http://localhost:8787](http://localhost:8787). Temporal’s development UI
 Use **Fixture** for deterministic rehearsal. Use **Live Codex** for the authenticated SDK path. The live runner inherits the configured Codex model unless `CODEX_MODEL` is set.
 
 The app is a trusted local demonstration. It uses the existing local ChatGPT-backed Codex login and disables network access inside turns. A public service or CI job should use the authentication and secret-handling method recommended for its automation environment.
+
+## Inspect agent consoles
+
+After a run starts, click **Agent consoles** to open the read-only terminal
+dialog. Opening and closing the dialog changes only the browser UI; the run
+lifecycle continues independently. Press `Esc` or click **Close agent consoles**
+to return focus to the launch control.
+
+Each pane identifies its worker, thread ID, attempt, current status, and SDK
+events. The attachment markers distinguish recorded state from new output:
+
+- If you open the dialog before the first event, each pane marks the `LIVE EDGE`
+  and appends events as the run produces them.
+- If you open the dialog during or after a run, each pane replays the events
+  recorded before attachment, marks the `LIVE EDGE`, and then appends new
+  events.
+- If the Worker fleet stops, the Baseline console reports lost process memory.
+  The Temporal console reports that Event History retained durable state.
+
+The console stays available after completion so you can inspect the final
+receipt. While work is active, **Kill workers** opens a confirmation dialog.
+After completion, the app replaces that action with **Start new run**.
+
+The console view maps each pane to one member of the execution tree.
+
+![Four read-only panes show coordinator, investigator, and test runner events at the live edge.](output/playwright/agent-consoles-live.png)
+
+Key implementation: `src/ui/AgentConsole.tsx`, `@xterm/xterm`, and
+`@xterm/addon-fit`.
 
 ## Present the code-trace slideshow
 
@@ -136,7 +167,14 @@ npm run check
 npm run build
 ```
 
-The integration suite launches a real ephemeral Temporal server, completes one Child Workflow, interrupts another Activity, replaces the Worker, and proves the completed child ran once while unfinished work retried. The Playwright suite launches the API with its own Temporal server and automates both acts, including the supervisor’s real kill/restart endpoints. Browser receipts are saved under `output/playwright/`.
+The integration suite launches a real ephemeral Temporal server and completes
+one Child Workflow. It interrupts another Activity, replaces the Worker, and
+proves that the completed child ran once while unfinished work retried. The
+Playwright suite launches the API with its own Temporal server and automates
+both acts, including the supervisor's real kill/restart endpoints. It also
+verifies early and mid-run console attachment, recorded-event replay, the live
+edge, focus restoration, offline receipts, and the completed-run control state.
+The suite saves browser receipts under `output/playwright/`.
 
 ## More detail
 

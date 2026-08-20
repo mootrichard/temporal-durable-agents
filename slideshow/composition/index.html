@@ -24,6 +24,7 @@
         --danger: #d70015;
         --danger-soft: #fff0f2;
         --code: #20212f;
+        --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
       }
 
       *,
@@ -41,6 +42,7 @@
         background: var(--canvas);
         color: var(--ink);
         font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+        font-optical-sizing: auto;
       }
 
       body {
@@ -76,7 +78,10 @@
       .slide-bg {
         position: absolute;
         inset: 0;
-        background: linear-gradient(135deg, rgba(94, 92, 230, 0.05), transparent 42%), var(--canvas);
+        background:
+          linear-gradient(135deg, rgba(94, 92, 230, 0.09), transparent 38%),
+          linear-gradient(315deg, rgba(94, 92, 230, 0.04), transparent 34%),
+          var(--canvas);
       }
 
       .slide-bg::before {
@@ -88,6 +93,14 @@
           linear-gradient(90deg, rgba(94, 92, 230, 0.045) 1px, transparent 1px);
         background-size: 72px 72px;
         mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent 78%);
+      }
+
+      .slide-bg::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        box-shadow: inset 0 0 120px rgba(65, 63, 183, 0.035);
+        pointer-events: none;
       }
 
       .slide-inner {
@@ -227,17 +240,17 @@
         padding: 0 20px;
         border: 2px solid var(--line);
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.86);
+        background: rgba(255, 255, 255, 0.78);
         color: var(--secondary);
         font-size: 23px;
         font-weight: 650;
       }
 
       .visual-panel {
-        border: 2px solid var(--line-soft);
+        border: 2px solid rgba(255, 255, 255, 0.92);
         border-radius: 24px;
-        background: rgba(255, 255, 255, 0.9);
-        box-shadow: 0 24px 70px rgba(31, 32, 48, 0.07);
+        background: rgba(255, 255, 255, 0.88);
+        box-shadow: 0 24px 70px rgba(31, 32, 48, 0.085), 0 0 0 1px rgba(210, 210, 215, 0.72);
       }
 
       .cover-layout {
@@ -320,13 +333,29 @@
       .tree-node-dot.three { bottom: 62px; right: 340px; }
       .tree-node-dot.four { top: 302px; left: 2px; }
 
-      .tree-node-dot.one {
-        animation: cover-pulse 8s linear 1 both;
+      .cover-copy .eyebrow { animation: cover-copy-in 560ms var(--ease-out) 80ms both; }
+      .cover-copy h1 { animation: cover-copy-in 680ms var(--ease-out) 150ms both; }
+      .cover-copy .lede { animation: cover-copy-in 680ms var(--ease-out) 230ms both; }
+      .cover-tree { animation: cover-materialize 720ms var(--ease-out) 180ms both; }
+      .tree-node-dot { animation: cover-node-in 480ms var(--ease-out) both; }
+      .tree-node-dot.one { animation-delay: 360ms; }
+      .tree-node-dot.two { animation-delay: 410ms; }
+      .tree-node-dot.three { animation-delay: 460ms; }
+      .tree-node-dot.four { animation-delay: 510ms; }
+
+      @keyframes cover-copy-in {
+        from { opacity: 0; transform: translateY(18px); }
+        to { opacity: 1; transform: translateY(0); }
       }
 
-      @keyframes cover-pulse {
-        from { opacity: 0.58; }
-        to { opacity: 1; }
+      @keyframes cover-materialize {
+        from { opacity: 0; transform: scale(0.97); }
+        to { opacity: 1; transform: scale(1); }
+      }
+
+      @keyframes cover-node-in {
+        from { opacity: 0; transform: scale(0.92); }
+        to { opacity: 1; transform: scale(1); }
       }
 
       .question-layout {
@@ -860,6 +889,30 @@
 
       .ledger .behavior {
         color: var(--secondary);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .cover-copy .eyebrow,
+        .cover-copy h1,
+        .cover-copy .lede,
+        .cover-tree,
+        .tree-node-dot {
+          animation: cover-fade 200ms ease both;
+          transform: none;
+        }
+
+        @keyframes cover-fade {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      }
+
+      @media (prefers-reduced-transparency: reduce) {
+        .visual-panel, .badge { background: var(--surface); }
+      }
+
+      @media (prefers-contrast: more) {
+        .visual-panel, .badge { border-color: #7a7a80; background: var(--surface); }
       }
     </style>
   </head>
@@ -1665,7 +1718,6 @@
             <div class="fact">tests executeChild</div><div>Child Activity pending</div><div class="behavior">Keep child open; retry its interrupted Activity.</div>
             <div class="fact">final runTests</div><div>No schedule event yet</div><div class="behavior">Schedule only after reconstructed barrier resolves.</div>
           </div>
-          <div class="trace-hotspot-label">Open the Event History microscope</div>
         </div>
       </section>
     </div>
