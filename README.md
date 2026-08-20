@@ -1,12 +1,17 @@
 # The Orchestrator Died. The Work Didn’t.
 
-A one-screen demonstration of a precise idea: an agent execution tree should outlive its operating-system process tree.
+An interactive demonstration and code-trace slideshow show how an agent
+execution tree can outlive its operating-system process tree.
 
 The same small TypeScript retry bug runs twice. Act I coordinates Codex turns and tests with promises inside one killable process group. Act II stores coordination in a Temporal Workflow, delegates investigations to Child Workflows, and checkpoints external work through Activity heartbeats. Kill every Worker and Codex/test subprocess; restart the fleet; the durable tree continues.
 
+The browser demo shows the failure and recovery as they happen. The HyperFrames
+slideshow follows the implementation from the API request through Workflow
+replay, with presenter notes for a detailed Temporal code walkthrough.
+
 ![The recovered Temporal execution tree](output/playwright/temporal-recovered.png)
 
-## Run the presentation
+## Run the live demo
 
 Requirements: Node 24+, npm, Docker, the `codex` CLI, and a local Codex login.
 
@@ -24,6 +29,50 @@ Open [http://localhost:8787](http://localhost:8787). Temporal’s development UI
 Use **Fixture** for deterministic rehearsal. Use **Live Codex** for the authenticated SDK path. The live runner inherits the configured Codex model unless `CODEX_MODEL` is set.
 
 The app is a trusted local demonstration. It uses the existing local ChatGPT-backed Codex login and disables network access inside turns. A public service or CI job should use the authentication and secret-handling method recommended for its automation environment.
+
+## Present the code-trace slideshow
+
+The `slideshow/` directory contains a 29-slide HyperFrames deck with a two-slide
+Event History branch for deeper questions. The main line follows the code in
+execution order:
+
+- `POST /api/runs` starts a managed run and assigns a stable Workflow ID.
+- A Worker polls the Task Queue and reconstructs `FixWorkflow` from Event
+  History.
+- The Workflow schedules Codex and test Activities, then starts two Child
+  Workflows for parallel investigation.
+- Activity heartbeats checkpoint Codex thread IDs and completed test files. The
+  UI reads pending heartbeat details through Temporal's `describe()` API.
+- `SIGKILL` removes the Worker process group while the Temporal execution
+  remains open.
+- A replacement Worker replays recorded results, retries unfinished Activities
+  from their heartbeat details, runs the implementation turn, and records
+  completion evidence.
+- The closing slides separate results recorded in Event History from
+  application-owned idempotency and external-effect safety.
+
+Start the presenter from the slideshow directory:
+
+```bash
+cd slideshow
+npm run present
+```
+
+Open the local URL printed by HyperFrames. Click **Present**, or press **P**, to
+open the audience tab. Keep the presenter tab for editable notes and the
+next-slide preview; share the audience tab during the talk.
+
+Validate the deck after an edit:
+
+```bash
+cd slideshow
+npm run check
+npm run snapshot
+```
+
+HyperFrames supports this project as a live slideshow and as per-slide stills.
+The project omits a linear video-render command because HyperFrames renders only
+the first top-level composition when asked to render this slideshow as one MP4.
 
 ## The fixture
 
@@ -89,4 +138,10 @@ npm run build
 
 The integration suite launches a real ephemeral Temporal server, completes one Child Workflow, interrupts another Activity, replaces the Worker, and proves the completed child ran once while unfinished work retried. The Playwright suite launches the API with its own Temporal server and automates both acts, including the supervisor’s real kill/restart endpoints. Browser receipts are saved under `output/playwright/`.
 
-See [How the durable agent tree works](docs/how-it-works.md), [Architecture and state ownership](docs/architecture.md), [Talk track and exact demo script](docs/talk-track.md), and [Verification receipts](docs/verification.md).
+## More detail
+
+- [Slideshow presenter guide](slideshow/README.md)
+- [How the durable agent tree works](docs/how-it-works.md)
+- [Architecture and state ownership](docs/architecture.md)
+- [Talk track and exact demo script](docs/talk-track.md)
+- [Verification receipts](docs/verification.md)
