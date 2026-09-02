@@ -6,6 +6,7 @@ import {
   CheckCircleIcon,
   CircleNotchIcon,
   CopyIcon,
+  ChartBarHorizontalIcon,
   FlowArrowIcon,
   MagnifyingGlassIcon,
   MinusCircleIcon,
@@ -33,6 +34,7 @@ import {
 } from './run-control-state.js';
 
 const AgentConsole = lazy(() => import('./AgentConsole.js'));
+const WorkflowTimeline = lazy(() => import('./WorkflowTimeline.js'));
 
 type Snapshots = Partial<Record<DemoMode, RunSnapshot>>;
 type Preflight = {
@@ -59,12 +61,15 @@ export function App() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [confirmKill, setConfirmKill] = useState(false);
   const [consoleOpen, setConsoleOpen] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
   const actionInFlight = useRef(false);
   const fleetActionRef = useRef<HTMLButtonElement>(null);
   const keepRunningRef = useRef<HTMLButtonElement>(null);
   const restoreFleetFocus = useRef(false);
   const consoleLaunchRef = useRef<HTMLButtonElement>(null);
   const restoreConsoleFocus = useRef(false);
+  const timelineLaunchRef = useRef<HTMLButtonElement>(null);
+  const restoreTimelineFocus = useRef(false);
   const snapshot = snapshots[mode] ?? createInitialSnapshot('preview', mode, runnerMode);
   const { action, actionLabel, runActive, showRunnerChoice } = deriveRunControlState(snapshot);
   const selectedNode = snapshot.nodes.find(({ id }) => id === selectedNodeId) ?? snapshot.nodes[0]!;
@@ -122,6 +127,17 @@ export function App() {
   }, [consoleOpen]);
 
   useEffect(() => {
+    if (timelineOpen) {
+      restoreTimelineFocus.current = true;
+      return;
+    }
+    if (restoreTimelineFocus.current) {
+      restoreTimelineFocus.current = false;
+      timelineLaunchRef.current?.focus();
+    }
+  }, [timelineOpen]);
+
+  useEffect(() => {
     if (confirmKill) {
       restoreFleetFocus.current = true;
       const frame = window.requestAnimationFrame(() => keepRunningRef.current?.focus());
@@ -152,6 +168,7 @@ export function App() {
     setHistoryOpen(false);
     setConfirmKill(false);
     setConsoleOpen(false);
+    setTimelineOpen(false);
   }
 
   async function start(): Promise<void> {
@@ -298,6 +315,22 @@ export function App() {
               Agent consoles
             </button>
           )}
+          {mode === 'temporal' && snapshot.runId !== 'preview' && (
+            <button
+              ref={timelineLaunchRef}
+              aria-label="Open workflow timeline"
+              className="console-launch"
+              onClick={() => {
+                setConfirmKill(false);
+                setConsoleOpen(false);
+                setTimelineOpen(true);
+              }}
+              type="button"
+            >
+              <ChartBarHorizontalIcon aria-hidden="true" weight="bold" />
+              Workflow timeline
+            </button>
+          )}
         </div>
       </header>
 
@@ -362,6 +395,16 @@ export function App() {
           </div>
         )}>
           <AgentConsole onClose={() => setConsoleOpen(false)} snapshot={snapshot} />
+        </Suspense>
+      )}
+
+      {timelineOpen && (
+        <Suspense fallback={(
+          <div className="agent-console-backdrop">
+            <div className="agent-console-loading" role="status">Opening workflow timeline…</div>
+          </div>
+        )}>
+          <WorkflowTimeline onClose={() => setTimelineOpen(false)} snapshot={snapshot} />
         </Suspense>
       )}
 

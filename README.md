@@ -39,6 +39,12 @@ dialog. Opening and closing the dialog changes only the browser UI; the run
 lifecycle continues independently. Press `Esc` or click **Close agent consoles**
 to return focus to the launch control.
 
+Temporal runs also expose a **Workflow timeline** modal. It reads the parent and
+Child Workflow Event Histories from Temporal, groups Activity attempts into
+time-scaled spans, and continues to load recorded history while the Worker fleet
+is offline. Use its Fit and zoom controls to inspect parallel execution and
+retry attempts.
+
 Each pane identifies its worker, thread ID, attempt, current status, and SDK
 events. The attachment markers distinguish recorded state from new output:
 
@@ -151,6 +157,7 @@ Temporal preserves recorded Workflow history; it cannot make every external effe
 ```text
 POST /api/runs                         { mode, runnerMode }
 GET  /api/runs/:runId                 current or cached snapshot
+GET  /api/runs/:runId/timeline        projected Temporal Event History spans
 POST /api/runs/:runId/kill            kill recorded Worker process group
 POST /api/runs/:runId/restart         launch replacement Workers
 GET  /api/preflight                   Codex login and Temporal address

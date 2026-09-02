@@ -26,6 +26,8 @@ import {
   terminateProcessGroup,
   type RecordedProcessTarget,
 } from './process-targets.js';
+import { projectWorkflowTimeline } from '../temporal/timeline.js';
+import type { WorkflowTimeline } from '../shared/workflow-timeline.js';
 
 type ManagedRun = {
   runId: string;
@@ -89,6 +91,37 @@ export class FleetSupervisor {
       await this.refreshTemporalProgress(managed);
     }
     return structuredClone(managed.snapshot);
+  }
+
+  async timeline(runId: string): Promise<WorkflowTimeline> {
+    const managed = this.requireRun(runId);
+    if (managed.mode !== 'temporal') throw new Error('Workflow timeline is available for Temporal runs');
+    const client = await this.getTemporalClient();
+    const rootHistory = await client.workflow.getHandle(runId).fetchHistory();
+    const childSpecs = [
+      {
+        workflowId: `${runId}-source-investigator`,
+        laneId: 'source-investigator' as const,
+        label: 'Source investigation',
+      },
+      {
+        workflowId: `${runId}-test-investigator`,
+        laneId: 'test-investigator' as const,
+        label: 'Test investigation',
+      },
+    ];
+    const childHistories = [];
+    for (const child of childSpecs) {
+      try {
+        childHistories.push({
+          ...child,
+          history: await client.workflow.getHandle(child.workflowId).fetchHistory(),
+        });
+      } catch (error) {
+        if (!(error instanceof WorkflowNotFoundError)) throw error;
+      }
+    }
+    return projectWorkflowTimeline(runId, rootHistory, childHistories);
   }
 
   async kill(runId: string): Promise<RunSnapshot> {

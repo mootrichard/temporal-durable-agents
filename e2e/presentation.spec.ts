@@ -66,6 +66,20 @@ test('contrasts lost process state with a recovered Temporal execution tree', as
   await expect(frozenConsoles.getByTestId('agent-console-transcript-source-investigator')).toContainText('Event History retained');
   await page.keyboard.press('Escape');
 
+  const openTimeline = page.getByRole('button', { name: 'Open workflow timeline' });
+  await openTimeline.click();
+  const timelineDialog = page.getByRole('dialog', { name: 'Workflow timeline' });
+  await expect(timelineDialog).toBeVisible();
+  await expect(timelineDialog).toContainText('Compute offline');
+  await expect(timelineDialog.getByTestId('workflow-timeline')).toBeVisible();
+  await expect(timelineDialog.locator('.timeline-bar').first()).toBeVisible({ timeout: 10_000 });
+  expect(await timelineDialog.locator('.timeline-bar').count()).toBeGreaterThanOrEqual(7);
+  await expect(timelineDialog).toContainText('Source investigation');
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: 'output/playwright/workflow-timeline-frozen.png' });
+  await page.keyboard.press('Escape');
+  await expect(openTimeline).toBeFocused();
+
   const temporalRestart = page.waitForResponse((response) => response.url().endsWith('/restart'));
   await page.getByTestId('fleet-action').click();
   const resumed = await (await temporalRestart).json();

@@ -41,6 +41,14 @@ app.get('/api/runs/:runId', async (request, response, next) => {
   }
 });
 
+app.get('/api/runs/:runId/timeline', async (request, response, next) => {
+  try {
+    response.json(await supervisor.timeline(request.params.runId));
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.post('/api/runs/:runId/kill', async (request, response, next) => {
   try {
     response.json(await supervisor.kill(request.params.runId));
