@@ -1,0 +1,340 @@
+{
+  "files": [
+    {
+      "file": "Aeonik-Air.woff",
+      "family": "Aeonik Air",
+      "rawFamily": "Aeonik Air",
+      "subfamily": "Regular",
+      "postscript": "Aeonik-Air",
+      "weight": 100,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "Aeonik-Air.woff2",
+      "family": "Aeonik Air",
+      "rawFamily": "Aeonik Air",
+      "subfamily": "Regular",
+      "postscript": "Aeonik-Air",
+      "weight": 100,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "Aeonik-AirItalic.woff",
+      "family": "Aeonik Air",
+      "rawFamily": "Aeonik Air",
+      "subfamily": "Italic",
+      "postscript": "Aeonik-AirItalic",
+      "weight": 100,
+      "style": "italic",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "Aeonik-AirItalic.woff2",
+      "family": "Aeonik Air",
+      "rawFamily": "Aeonik Air",
+      "subfamily": "Italic",
+      "postscript": "Aeonik-AirItalic",
+      "weight": 100,
+      "style": "italic",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "Aeonik-MediumItalic.woff",
+      "family": "Aeonik",
+      "rawFamily": "Aeonik Medium",
+      "subfamily": "Italic",
+      "postscript": "Aeonik-MediumItalic",
+      "weight": 500,
+      "style": "italic",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "Aeonik-MediumItalic.woff2",
+      "family": "Aeonik",
+      "rawFamily": "Aeonik Medium",
+      "subfamily": "Italic",
+      "postscript": "Aeonik-MediumItalic",
+      "weight": 500,
+      "style": "italic",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "Aeonik-RegularItalic.woff",
+      "family": "Aeonik",
+      "rawFamily": "Aeonik",
+      "subfamily": "Italic",
+      "postscript": "Aeonik-RegularItalic",
+      "weight": 400,
+      "style": "italic",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "Aeonik-RegularItalic.woff2",
+      "family": "Aeonik",
+      "rawFamily": "Aeonik",
+      "subfamily": "Italic",
+      "postscript": "Aeonik-RegularItalic",
+      "weight": 400,
+      "style": "italic",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "Aeonik-ThinItalic.woff",
+      "family": "Aeonik",
+      "rawFamily": "Aeonik Thin",
+      "subfamily": "Italic",
+      "postscript": "Aeonik-ThinItalic",
+      "weight": 200,
+      "style": "italic",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "Aeonik-ThinItalic.woff2",
+      "family": "Aeonik",
+      "rawFamily": "Aeonik Thin",
+      "subfamily": "Italic",
+      "postscript": "Aeonik-ThinItalic",
+      "weight": 200,
+      "style": "italic",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "inter-cyrillic-ext-500-normal.B0yAr1jD.woff2",
+      "family": "Inter",
+      "rawFamily": "Inter Medium",
+      "subfamily": "Regular",
+      "postscript": "Inter-Medium",
+      "weight": 500,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "inter-cyrillic-ext-500-normal.BmqWE9Dz.woff",
+      "family": "Inter",
+      "rawFamily": "Inter Medium",
+      "subfamily": "Regular",
+      "postscript": "Inter-Medium",
+      "weight": 500,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "inter-latin-500-normal.BL9OpVg8.woff",
+      "family": "Inter",
+      "rawFamily": "Inter Medium",
+      "subfamily": "Regular",
+      "postscript": "Inter-Medium",
+      "weight": 500,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "inter-latin-500-normal.Cerq10X2.woff2",
+      "family": "Inter",
+      "rawFamily": "Inter Medium",
+      "subfamily": "Regular",
+      "postscript": "Inter-Medium",
+      "weight": 500,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "inter-latin-ext-500-normal.BxGbmqWO.woff",
+      "family": "Inter",
+      "rawFamily": "Inter Medium",
+      "subfamily": "Regular",
+      "postscript": "Inter-Medium",
+      "weight": 500,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "inter-latin-ext-500-normal.CV4jyFjo.woff2",
+      "family": "Inter",
+      "rawFamily": "Inter Medium",
+      "subfamily": "Regular",
+      "postscript": "Inter-Medium",
+      "weight": 500,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "noto-sans-mono-latin-900-normal.CJTA48__.woff",
+      "family": "Noto Sans Mono",
+      "rawFamily": "Noto Sans Mono Black",
+      "subfamily": "Regular",
+      "postscript": "NotoSansMono-Black",
+      "weight": 900,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "noto-sans-mono-latin-900-normal.y-oGxUwo.woff2",
+      "family": "Noto Sans Mono",
+      "rawFamily": "Noto Sans Mono Black",
+      "subfamily": "Regular",
+      "postscript": "NotoSansMono-Black",
+      "weight": 900,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "noto-sans-mono-latin-ext-800-normal.Cj4Kd1GG.woff2",
+      "family": "Noto Sans Mono",
+      "rawFamily": "Noto Sans Mono ExtraBold",
+      "subfamily": "Regular",
+      "postscript": "NotoSansMono-ExtraBold",
+      "weight": 800,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "noto-sans-mono-latin-ext-800-normal.wlxj0z1O.woff",
+      "family": "Noto Sans Mono",
+      "rawFamily": "Noto Sans Mono ExtraBold",
+      "subfamily": "Regular",
+      "postscript": "NotoSansMono-ExtraBold",
+      "weight": 800,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "noto-sans-mono-latin-ext-900-normal.CIEhZt_x.woff",
+      "family": "Noto Sans Mono",
+      "rawFamily": "Noto Sans Mono Black",
+      "subfamily": "Regular",
+      "postscript": "NotoSansMono-Black",
+      "weight": 900,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "noto-sans-mono-latin-ext-900-normal.rZSlIMJJ.woff2",
+      "family": "Noto Sans Mono",
+      "rawFamily": "Noto Sans Mono Black",
+      "subfamily": "Regular",
+      "postscript": "NotoSansMono-Black",
+      "weight": 900,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    }
+  ],
+  "families": [
+    {
+      "family": "Aeonik",
+      "weights": [
+        200,
+        400,
+        500
+      ],
+      "variable": false,
+      "fileCount": 6,
+      "files": [
+        "Aeonik-MediumItalic.woff",
+        "Aeonik-MediumItalic.woff2",
+        "Aeonik-RegularItalic.woff",
+        "Aeonik-RegularItalic.woff2",
+        "Aeonik-ThinItalic.woff",
+        "Aeonik-ThinItalic.woff2"
+      ]
+    },
+    {
+      "family": "Aeonik Air",
+      "weights": [
+        100
+      ],
+      "variable": false,
+      "fileCount": 4,
+      "files": [
+        "Aeonik-Air.woff",
+        "Aeonik-Air.woff2",
+        "Aeonik-AirItalic.woff",
+        "Aeonik-AirItalic.woff2"
+      ]
+    },
+    {
+      "family": "Inter",
+      "weights": [
+        500
+      ],
+      "variable": false,
+      "fileCount": 6,
+      "files": [
+        "inter-cyrillic-ext-500-normal.B0yAr1jD.woff2",
+        "inter-cyrillic-ext-500-normal.BmqWE9Dz.woff",
+        "inter-latin-500-normal.BL9OpVg8.woff",
+        "inter-latin-500-normal.Cerq10X2.woff2",
+        "inter-latin-ext-500-normal.BxGbmqWO.woff",
+        "inter-latin-ext-500-normal.CV4jyFjo.woff2"
+      ]
+    },
+    {
+      "family": "Noto Sans Mono",
+      "weights": [
+        800,
+        900
+      ],
+      "variable": false,
+      "fileCount": 6,
+      "files": [
+        "noto-sans-mono-latin-900-normal.CJTA48__.woff",
+        "noto-sans-mono-latin-900-normal.y-oGxUwo.woff2",
+        "noto-sans-mono-latin-ext-800-normal.Cj4Kd1GG.woff2",
+        "noto-sans-mono-latin-ext-800-normal.wlxj0z1O.woff",
+        "noto-sans-mono-latin-ext-900-normal.CIEhZt_x.woff",
+        "noto-sans-mono-latin-ext-900-normal.rZSlIMJJ.woff2"
+      ]
+    }
+  ],
+  "unidentified": [],
+  "meta": {
+    "generatedAt": "2026-08-27T00:22:30.181Z",
+    "tool": "fontkit"
+  }
+}

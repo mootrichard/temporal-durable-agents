@@ -1,0 +1,21 @@
+<template>
+  <style>
+    @font-face{font-family:"Inter";font-weight:500;font-style:normal;font-display:block;src:url("assets/fonts/Inter-500.woff2") format("woff2")}@font-face{font-family:"Noto Sans Mono";font-weight:800;font-style:normal;font-display:block;src:url("assets/fonts/NotoSansMono-800.woff2") format("woff2")}
+    #root{width:1920px;height:1080px;position:relative;overflow:hidden;color:#F8FAFC;font-family:"Inter",sans-serif}#root *{box-sizing:border-box}.bg{position:absolute;inset:0;background:#0B1020}.content{position:absolute;inset:0;padding:64px 80px}.top{display:flex;justify-content:space-between;font:800 20px/1 "Noto Sans Mono",monospace;letter-spacing:.12em;text-transform:uppercase;color:#92A4C3}h1{margin:30px 0 0;font-size:74px;line-height:1;font-weight:500;letter-spacing:-.04em}
+    .main{position:absolute;left:80px;right:80px;top:230px;height:610px;display:grid;grid-template-columns:62% 1fr;gap:28px}.screen{border:1px solid rgba(248,250,252,.16);border-radius:12px;overflow:hidden;background:#11172A}.screen img{width:100%;height:100%;object-fit:cover}.status{display:grid;grid-template-rows:repeat(3,1fr);gap:18px}.card{padding:28px;border:1px solid rgba(248,250,252,.16);border-radius:12px;background:#11172A;display:flex;flex-direction:column;justify-content:center}.label{font:800 16px/1 "Noto Sans Mono",monospace;letter-spacing:.11em;color:#92A4C3}.value{margin-top:16px;font-size:34px}.card.history{background:#252448}.card.id{background:#F8FAFC;color:#0B1020}.card.id .label{color:#4C556A}.rail{position:absolute;left:80px;right:80px;top:878px;height:64px;display:grid;place-items:center;border-radius:8px;background:#7F86F1;color:#0B1020;font:800 24px/1 "Noto Sans Mono",monospace;letter-spacing:.1em}
+  </style>
+  <div data-hf-id="hf-byjo" id="root" data-composition-id="05-compute-disappears" data-width="1920" data-height="1080" data-duration="4.4">
+    <div data-hf-id="hf-o8q1" id="f05-bg" class="clip bg" data-start="0" data-duration="4.4" data-track-index="0"></div>
+    <div data-hf-id="hf-644e" id="f05-content" class="clip content" data-start="0" data-duration="4.4" data-track-index="1">
+      <div data-hf-id="hf-sijt" class="top"><span data-hf-id="hf-r3qc">Failure injection · SIGKILL</span><span data-hf-id="hf-p7u2">Temporal run</span></div><h1 data-hf-id="hf-if20">Compute disappears. Identity survives.</h1>
+      <div data-hf-id="hf-k15r" class="main"><div data-hf-id="hf-cdmk" class="screen"><img data-hf-id="hf-qolf" data-layout-allow-overflow src="assets/image_004.png" alt="Temporal agent execution surface"></div><div data-hf-id="hf-8kim" class="status"><div data-hf-id="hf-vn2y" class="card"><div data-hf-id="hf-wwjs" class="label">WORKER FLEET</div><div data-hf-id="hf-m77m" class="value">OFFLINE</div></div><div data-hf-id="hf-gqfq" class="card history"><div data-hf-id="hf-lvmi" class="label">EVENT HISTORY</div><div data-hf-id="hf-hcs2" class="value">AVAILABLE</div></div><div data-hf-id="hf-0hk5" class="card id"><div data-hf-id="hf-uvyk" class="label">WORKFLOW ID</div><div data-hf-id="hf-q5ew" class="value">UNCHANGED</div></div></div></div>
+      <div data-hf-id="hf-85hx" class="rail">REPLACEMENT WORKER · SAME EXECUTION</div>
+    </div>
+  </div>
+  <script>
+    const tl=gsap.timeline({paused:true});
+    tl.fromTo(".content",{opacity:0,y:14},{opacity:1,y:0,duration:.52,ease:"power3.out"},0)
+      .fromTo(".card.id",{opacity:.45},{opacity:1,duration:.32,ease:"power2.out"},.42);
+    window.__timelines["05-compute-disappears"]=tl;
+  </script>
+</template>

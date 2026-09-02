@@ -1,0 +1,111 @@
+[p] New features for faster build and reliable AI |
+[span] See what you missed at Replay 2026 ›
+[a] Talk to Sales
+[li] Platform
+[a] Overview
+[a] How Temporal Works
+[a] Temporal Cloud
+[a] Security
+[button] Platform
+[li] Use Cases
+[a] Customer Stories
+[p] By Industry
+[a] Financial Services
+[p] By Audience
+[a] Platform Engineering
+[a] Startups
+[a] Partners
+[button] Use Cases
+[li] Resources
+[a] Resource Library
+[a] Learn Temporal
+[a] Community
+[a] Code Exchange
+[a] Changelog
+[button] Resources
+[a] Try Free
+[h1] Temporal Brand Guidelines
+[p] Download Temporal brand assets. Find our logo, brand guidelines, and usage policies to ensure accurate representation in all marketing materials.
+[p] Primary Brand Colors
+[p] #444CE7
+[p] R68 G76 B231
+[p] Space Black
+[p] #141414
+[p] R20 G20 B20
+[p] Off White
+[p] #F8FAFC
+[p] R248 G250 B252
+[p] Logos
+[p] Horizontal Logo
+[strong] White
+[a] PNG
+[a] EPS
+[a] SVG
+[strong] Black
+[a] PNG
+[a] EPS
+[a] SVG
+[p] Vertical Logo
+[strong] White
+[a] PNG
+[a] EPS
+[a] SVG
+[strong] Black
+[a] PNG
+[a] EPS
+[a] SVG
+[p] Logomark
+[strong] White
+[a] PNG
+[a] EPS
+[a] SVG
+[strong] Black
+[a] PNG
+[a] EPS
+[a] SVG
+[h3] Boilerplates
+[b] 25 words, 186 chars
+[p] Temporal is an open source durable execution solution that abstracts away complexity from building scalable, distributed systems and helps you deliver more reliable applications, faster.
+[b] 50 words, 375 chars
+[p] Temporal delivers an open source durable execution solution that abstracts away the complexity of building scalable distributed systems so developers can focus on what matters – delivering reliable applications, faster. It's been adopted by thousands of companies to run mission-critical applications, including Stripe, Netflix, Alaska Air, Snap, Datadog, Hashicorp and more.
+[p] Ensuring brand integrity
+[p] Using Temporal Colors
+[p] Temporal Logo Guidelines
+[p] ALL SYSTEMS OPERATIONAL
+[p] 99.9999% trailing 30-day uptime
+[div] Sign up for our newsletter
+[label] Email Address
+[p] Discover
+[a] Overview
+[a] How Temporal Works
+[a] Temporal Cloud
+[a] Security
+[a] Trust Center
+[a] Startups
+[a] Customer Stories
+[a] Project-based tutorials
+[a] Example applications
+[a] Code Exchange
+[a] Replay 2026 Recap
+[a] Ask an expert
+[p] Developers
+[a] Getting Started with Temporal
+[a] Start building your next app
+[a] Temporal Cloud docs
+[a] Production deployments
+[a] Temporal 101
+[a] Temporal 102
+[a] Introduction to Temporal Cloud
+[p] Community
+[a] Join our Slack group
+[a] Find a meetup near you
+[a] Community forum
+[a] Crystal Palace
+[a] Contact us
+[a] Partners
+[p] 2026 © Temporal Technologies. All Rights Reserved.
+[a] Privacy Policy
+[a] Candidate Privacy Policy
+[a] Terms of Service
+[a] Code of Conduct
+[button] Your Privacy Choices

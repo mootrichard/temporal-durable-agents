@@ -1,0 +1,6 @@
+{"id":"image_001","type":"image","path":".media/images/image_001.png","source":"ingested","description":"temporal-recovered.png","provenance":{"provider":"local","from":"../../output/playwright/temporal-recovered.png"}}
+{"id":"image_002","type":"image","path":".media/images/image_002.png","source":"ingested","description":"baseline-killed.png","provenance":{"provider":"local","from":"../../output/playwright/baseline-killed.png"}}
+{"id":"image_003","type":"image","path":".media/images/image_003.png","source":"ingested","description":"agent-consoles-live.png","provenance":{"provider":"local","from":"../../output/playwright/agent-consoles-live.png"}}
+{"id":"image_004","type":"image","path":".media/images/image_004.png","source":"ingested","description":"temporal-live-heartbeats.png","provenance":{"provider":"local","from":"../../output/playwright/temporal-live-heartbeats.png"}}
+{"id":"image_005","type":"image","path":".media/images/image_005.png","source":"ingested","description":"slideshow-code-trace-replay.png","provenance":{"provider":"local","from":"../../output/playwright/slideshow-code-trace-replay.png"}}
+{"id":"logo_001","type":"logo","path":".media/images/logo_001.svg","source":"ingested","description":"logo-62a066cf.svg","provenance":{"provider":"local","from":"capture/assets/logo-62a066cf.svg"}}

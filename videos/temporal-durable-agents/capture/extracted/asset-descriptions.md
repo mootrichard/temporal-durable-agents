@@ -1,0 +1,121 @@
+# Asset Descriptions
+
+⚠️  GEMINI_API_KEY not set — descriptions below are catalog-derived (alt text, headings, section context, filename) instead of Vision-generated. To get richer Vision descriptions on the next capture, set GEMINI_API_KEY (or GOOGLE_API_KEY) and re-run.
+
+The `logo-<hash>.svg` filename prefix is a structural hint (DOM said this SVG was inside a `<header>`, home-link `<a>`, or had an aria-label matching the page brand). To pick the actual brand logo without Vision, open the `logo-*` candidates in a previewer or rasterize them with `sharp` before referencing — composing a fake logo ships off-brand in the final video.
+
+- abstract-gradient-2.png — 421KB, abstract gradient 2
+- abstract-gradient-vertical.png — 1386KB, abstract gradient vertical
+- abstract-gradient.png — 1342KB, abstract gradient
+- abstract.jpg — 579KB, abstract
+- asteroid-on-light.gif — 323KB, "animated GIF: 14 frames, 2.320s, loops forever"
+- boilerplates.png — 79KB, boilerplates
+- bug-logo.png — 17KB, "White four-pointed star or cross icon with rounded edges on a blue gradient back", in: grid grid-flow-col-dense sm:grid-cols-page
+- cloud-resource-bg.jpg — 245KB, cloud resource bg
+- customer-hype-bg.jpg — 261KB, customer hype bg
+- favicon.ico — 15KB, favicon
+- generic-laptop.png — 168KB, "Blue laptop with green code on screen, abstract shapes, green rectangle, pink gl", section: "Boilerplates"
+- grid-perspective.webp — 245KB, grid perspective
+- grid.png — 24KB, grid
+- holiday.jpg — 426KB, holiday
+- horizontal-logo.png — 51KB, "White Temporal logo with geometric icon on gradient blue to purple background", in: grid grid-flow-col-dense sm:grid-cols-page
+- image-10.png — 430KB, image 10
+- image-11.png — 679KB, image 11
+- image-12.png — 1252KB, image 12
+- image-13.png — 1999KB, image 13
+- image-14.png — 2907KB, image 14
+- image-15.png — 12KB, image 15
+- image-16.png — 11KB, image 16
+- image-17.png — 13KB, image 17
+- image-18.png — 20KB, image 18
+- image-19.png — 26KB, image 19
+- image-20.png — 41KB, image 20
+- image-21.png — 73KB, image 21
+- image-22.png — 118KB, image 22
+- image-23.png — 181KB, image 23
+- image-24.png — 17KB, image 24
+- image-25.png — 31KB, image 25
+- image-26.png — 49KB, image 26
+- image-27.png — 72KB, image 27
+- image-28.png — 110KB, image 28
+- image-29.png — 206KB, image 29
+- image-30.png — 361KB, image 30
+- image-31.png — 565KB, image 31
+- image-34.png — 276KB, image 34
+- image-36.avif — 77KB, image 36
+- image-39.avif — 230KB, image 39
+- image-42.avif — 381KB, image 42
+- image-47.avif — 140KB, image 47
+- image-49.avif — 124KB, image 49
+- image-51.avif — 541KB, image 51
+- image-53.avif — 919KB, image 53
+- image-55.avif — 960KB, image 55
+- image-58.avif — 291KB, image 58
+- image-59.avif — 11KB, image 59
+- image-62.avif — 26KB, image 62
+- image-63.webp — 270KB, image 63
+- image-9.png — 298KB, image 9
+- logo-62a066cf.svg — 4KB, logo 62a066cf
+- og-image.png — 522KB, og image
+- self-hosted-resource-bg.jpg — 221KB, self hosted resource bg
+- sm-grid-cols-page-sm-gap-x-4.png — 38KB, sm grid cols page sm gap x 4
+- solar-system.png — 128KB, solar system
+- space-vortex.jpg — 429KB, space vortex
+- stars-big.png — 16KB, stars big
+- stars.avif — 175KB, stars
+- svg-02bc6a7a.svg — 2KB, svg 02bc6a7a
+- svg-03efb213.svg — 23KB, svg 03efb213
+- svg-0b2a6486.svg — 2KB, svg 0b2a6486
+- svg-5d8139c3.svg — 0KB, svg 5d8139c3
+- svg-5e8b7590.svg — 4KB, svg 5e8b7590
+- svg-9c5773eb.svg — 1KB, svg 9c5773eb
+- svg-cd5077ff.svg — 1KB, svg cd5077ff
+- vertical-logo.png — 52KB, "White Temporal logo with four-pointed star symbol on blue gradient background", in: grid grid-flow-col-dense sm:grid-cols-page
+- white-temporal-logo-with-four-pointed-st.png — 23KB, white temporal logo with four pointed st
+- white-temporal-logo-with-geometric-icon-.png — 21KB, white temporal logo with geometric icon 
+- svgs/logo-ddcede26.svg — logo ddcede26
+- svgs/svg-5329361c.svg — svg 5329361c
+- svgs/svg-5daec5ce.svg — svg 5daec5ce
+- svgs/svg-6118c265.svg — svg 6118c265
+- svgs/svg-7553c8cb.svg — svg 7553c8cb
+- svgs/svg-a29c734d.svg — svg a29c734d
+- svgs/svg-af2787da.svg — svg af2787da
+- svgs/svg-bdef6401.svg — svg bdef6401
+- svgs/svg-bf3c4d2e.svg — svg bf3c4d2e
+- svgs/svg-c1e18f4d.svg — svg c1e18f4d
+- svgs/svg-c2e7ba14.svg — svg c2e7ba14
+- svgs/svg-cc13a3bb.svg — svg cc13a3bb
+- svgs/svg-d51093e3.svg — svg d51093e3
+- svgs/svg-f259e77f.svg — svg f259e77f
+- svgs/svg-fe80f856.svg — svg fe80f856
+- fonts/Aeonik-Air.woff — font file
+- fonts/Aeonik-Air.woff2 — font file
+- fonts/Aeonik-AirItalic.woff — font file
+- fonts/Aeonik-AirItalic.woff2 — font file
+- fonts/Aeonik-MediumItalic.woff — font file
+- fonts/Aeonik-MediumItalic.woff2 — font file
+- fonts/Aeonik-RegularItalic.woff — font file
+- fonts/Aeonik-RegularItalic.woff2 — font file
+- fonts/Aeonik-ThinItalic.woff — font file
+- fonts/Aeonik-ThinItalic.woff2 — font file
+- fonts/inter-cyrillic-ext-500-normal.B0yAr1jD.woff2 — font file
+- fonts/inter-cyrillic-ext-500-normal.BmqWE9Dz.woff — font file
+- fonts/inter-latin-500-normal.BL9OpVg8.woff — font file
+- fonts/inter-latin-500-normal.Cerq10X2.woff2 — font file
+- fonts/inter-latin-ext-500-normal.BxGbmqWO.woff — font file
+- fonts/inter-latin-ext-500-normal.CV4jyFjo.woff2 — font file
+- fonts/noto-sans-mono-latin-900-normal.CJTA48__.woff — font file
+- fonts/noto-sans-mono-latin-900-normal.y-oGxUwo.woff2 — font file
+- fonts/noto-sans-mono-latin-ext-800-normal.Cj4Kd1GG.woff2 — font file
+- fonts/noto-sans-mono-latin-ext-800-normal.wlxj0z1O.woff — font file
+- fonts/noto-sans-mono-latin-ext-900-normal.CIEhZt_x.woff — font file
+- fonts/noto-sans-mono-latin-ext-900-normal.rZSlIMJJ.woff2 — font file
+
+## Project evidence assets
+
+- .media/images/image_001.png — 1440×1024 product capture: Temporal mode selected after Worker replacement; the execution tree is complete, tests are 4/4, and the right rail shows the completion receipt and one-line diff. Primary recovery proof.
+- .media/images/image_002.png — 1440×1024 product capture: Baseline mode after every Worker stops; process memory is lost and the execution tree is interrupted. Primary failure contrast.
+- .media/images/image_003.png — 1440×1024 product capture: four-pane live agent console for coordinator, source investigator, test investigator, and test runner. Use as the “real agent work is an execution tree” proof.
+- .media/images/image_004.png — product capture: Temporal Activity heartbeats and in-flight progress. Use when explaining resumable application checkpoints.
+- .media/images/image_005.png — existing code-trace replay slide. Use only if a source-level replay visual is needed.
+- .media/images/logo_001.svg — official white Temporal wordmark captured from temporal.io/brand. Use on a dark opener and closing sting.

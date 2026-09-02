@@ -1,0 +1,172 @@
+{
+  "typography": [
+    {
+      "role": "display",
+      "fontFamily": "Aeonik",
+      "fontSize": "68px",
+      "fontWeight": "300",
+      "lineHeight": "74.8px",
+      "letterSpacing": "-2px",
+      "color": "#F8FAFC",
+      "sampleText": "Temporal Brand Guidelines"
+    },
+    {
+      "role": "body",
+      "fontFamily": "Aeonik",
+      "fontSize": "32px",
+      "fontWeight": "400",
+      "lineHeight": "38.4px",
+      "letterSpacing": "normal",
+      "color": "#FFFFFF",
+      "sampleText": "UV"
+    },
+    {
+      "role": "label",
+      "fontFamily": "Aeonik",
+      "fontSize": "16px",
+      "fontWeight": "500",
+      "lineHeight": "25.6px",
+      "letterSpacing": "-0.4px",
+      "color": "#CACBF9",
+      "sampleText": "White"
+    },
+    {
+      "role": "code",
+      "fontFamily": "Noto Sans Mono",
+      "fontSize": "12px",
+      "fontWeight": "300",
+      "lineHeight": "16px",
+      "letterSpacing": "1.6px",
+      "color": "#59FDA0",
+      "sampleText": "ALL SYSTEMS OPERATIONAL"
+    }
+  ],
+  "spacing": {
+    "observed": [
+      2,
+      8,
+      12,
+      16,
+      20,
+      24,
+      32,
+      40,
+      48,
+      96
+    ],
+    "baseUnit": 8
+  },
+  "radius": [],
+  "shadows": [],
+  "buttons": [
+    {
+      "label": "Try Free",
+      "background": "transparent",
+      "backgroundImage": "linear-gradient(45deg, rgb(182, 100, 255) 0%, rgb(68, 76, 231) 100%)",
+      "backdropFilter": "",
+      "color": "#F8FAFC",
+      "padding": "0px 16px",
+      "borderRadius": "0px",
+      "border": "0px solid rgb(124, 143, 177)",
+      "boxShadow": "none",
+      "fontSize": "16px",
+      "fontWeight": "500",
+      "height": "44px"
+    },
+    {
+      "label": "Log In",
+      "background": "transparent",
+      "backgroundImage": "linear-gradient(rgb(20, 20, 20), rgb(20, 20, 20)), linear-gradient(45deg, rgb(68, 76, 231), rgb(182, 100, 255))",
+      "backdropFilter": "",
+      "color": "#FFFFFF",
+      "padding": "0px 16px",
+      "borderRadius": "0px",
+      "border": "2px solid rgba(0, 0, 0, 0)",
+      "boxShadow": "none",
+      "fontSize": "16px",
+      "fontWeight": "500",
+      "height": "44px"
+    },
+    {
+      "label": "Using Temporal Colors",
+      "background": "transparent",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#F8FAFC",
+      "padding": "0px",
+      "borderRadius": "0px",
+      "border": "0px solid rgb(124, 143, 177)",
+      "boxShadow": "none",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "height": "33.5938px"
+    }
+  ],
+  "cards": [
+    {
+      "label": "card",
+      "background": "transparent",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#F8FAFC",
+      "padding": "0px",
+      "borderRadius": "0px",
+      "border": "0px solid rgb(124, 143, 177)",
+      "boxShadow": "none",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "height": "466.594px"
+    },
+    {
+      "label": "card",
+      "background": "transparent",
+      "backgroundImage": "linear-gradient(rgb(20, 20, 20), rgb(20, 20, 20)), linear-gradient(45deg, rgb(68, 76, 231), rgb(182, 100, 255))",
+      "backdropFilter": "",
+      "color": "#F8FAFC",
+      "padding": "0px",
+      "borderRadius": "0px",
+      "border": "1px solid rgba(0, 0, 0, 0)",
+      "boxShadow": "none",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "height": "466.594px"
+    }
+  ],
+  "nav": {
+    "label": "navigation",
+    "background": "transparent",
+    "backgroundImage": "",
+    "backdropFilter": "",
+    "color": "#000000",
+    "padding": "0px",
+    "borderRadius": "0px",
+    "border": "0px solid rgb(124, 143, 177)",
+    "boxShadow": "none",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "height": "20px"
+  },
+  "chips": [
+    {
+      "label": "ALL SYSTEMS OPERATIONAL",
+      "background": "transparent",
+      "color": "#59FDA0",
+      "padding": "8px 12px 8px 24px",
+      "borderRadius": "0px",
+      "border": "1px solid rgb(55, 71, 97)",
+      "boxShadow": "none",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "height": "34px"
+    }
+  ],
+  "statCells": [],
+  "tabs": [],
+  "backgrounds": [
+    {
+      "value": "linear-gradient(rgb(20, 20, 20), rgb(20, 20, 20)), linear-gradient(45deg, rgb(68, 76, 231), rgb(182, 100, 255))",
+      "area": 1476261
+    }
+  ],
+  "glass": []
+}

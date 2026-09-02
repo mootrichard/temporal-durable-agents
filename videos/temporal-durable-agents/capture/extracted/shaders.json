@@ -1,0 +1,18 @@
+[
+  {
+    "type": "vertex",
+    "source": "\n          attribute vec2 position;\n          void main() {\n              gl_Position = vec4(position, 0.0, 1.0);\n          }\n      "
+  },
+  {
+    "type": "fragment",
+    "source": "\n          precision mediump float;\n          void main() {\n              gl_FragColor = vec4(0.812, 0.195, 0.553, 0.921); // Set line color\n          }\n      "
+  },
+  {
+    "type": "vertex",
+    "source": "\n\t\t\tattribute vec2 attrVertex;\n\t\t\tvarying vec2 varyinTexCoordinate;\n\t\t\tuniform vec2 uniformOffset;\n\t\t\tvoid main(){\n\t\t\t\tvaryinTexCoordinate = attrVertex + uniformOffset;\n\t\t\t\tgl_Position = vec4(attrVertex, 0, 1);\n\t\t\t}\n\t\t"
+  },
+  {
+    "type": "fragment",
+    "source": "\n\t\t\tprecision mediump float;\n\t\t\tvarying vec2 varyinTexCoordinate;\n\t\t\tvoid main() {\n\t\t\t\tgl_FragColor = vec4(varyinTexCoordinate, 1, 1);\n\t\t\t}\n\t\t"
+  }
+]
