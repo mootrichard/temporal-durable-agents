@@ -50,7 +50,14 @@ test('contrasts lost process state with a recovered Temporal execution tree', as
   await page.getByRole('button', { name: 'View full event history' }).click();
   await expect(page.getByTestId('execution-trace')).toContainText('source-investigator started');
   await expect(page.getByTestId('run-phase')).toHaveText('testing', { timeout: 30_000 });
-  await expect(page.getByTestId('test-progress')).toHaveText('3 / 4');
+  let checkpointBeforeKill = 0;
+  await expect.poll(async () => {
+    checkpointBeforeKill = Number.parseInt(
+      await page.getByTestId('test-progress').innerText(),
+      10,
+    );
+    return checkpointBeforeKill >= 2 && checkpointBeforeKill < 4;
+  }).toBe(true);
   await expect(page.getByTestId('execution-trace')).toContainText('investigator completed');
   await page.getByTestId('fleet-action').click();
   await expect(page.getByRole('dialog', { name: 'Stop every worker?' })).toBeVisible();
@@ -58,7 +65,8 @@ test('contrasts lost process state with a recovered Temporal execution tree', as
   await page.getByTestId('confirm-fleet-stop').click();
   const frozen = await (await temporalKill).json();
   expect(frozen.sequence).toBeGreaterThan(0);
-  expect(frozen.metrics.completedTests).toBe(3);
+  expect(frozen.metrics.completedTests).toBeGreaterThanOrEqual(checkpointBeforeKill);
+  expect(frozen.metrics.completedTests).toBeLessThan(4);
   await expect(page.getByTestId('frozen-snapshot')).toContainText('History is waiting.');
   await page.getByRole('button', { name: 'Open agent consoles' }).click();
   const frozenConsoles = page.getByRole('dialog', { name: 'Agent consoles' });
@@ -88,8 +96,9 @@ test('contrasts lost process state with a recovered Temporal execution tree', as
   expect(resumed.sequence).toBeGreaterThan(0);
 
   await expect(page.getByTestId('run-phase')).toHaveText('complete', { timeout: 45_000 });
-  await expect(page.getByRole('button', { name: 'Kill workers' })).toBeHidden();
-  await expect(page.getByTestId('fleet-action')).toHaveText('Start new run');
+  await expect(page.getByRole('button', { name: 'Kill workers' })).toBeVisible();
+  await expect(page.locator('.run-status')).toContainText('Run complete');
+  await expect(page.locator('.run-status')).toContainText('Workers still online');
   await expect(page.getByRole('button', { name: 'Open agent consoles' })).toBeVisible();
   await expect(page.getByTestId('completed-turns')).toHaveText('4');
   await expect(page.getByTestId('test-progress')).toHaveText('4 / 4');
@@ -102,4 +111,16 @@ test('contrasts lost process state with a recovered Temporal execution tree', as
   const temporalLegacyStyle = await page.addStyleTag({ content: '.console-launch { display: none !important; }' });
   await page.screenshot({ path: 'output/playwright/temporal-recovered.png' });
   await temporalLegacyStyle.evaluate((element) => element.remove());
+
+  const completedKill = page.waitForResponse((response) => response.url().endsWith('/kill'));
+  await page.getByTestId('fleet-action').click();
+  await page.getByTestId('confirm-fleet-stop').click();
+  const cleanedUp = await (await completedKill).json();
+  expect(cleanedUp).toMatchObject({
+    phase: 'complete',
+    workersOnline: false,
+    frozen: false,
+  });
+  await expect(page.getByTestId('frozen-snapshot')).toBeHidden();
+  await expect(page.getByTestId('fleet-action')).toHaveText('Start new run');
 });

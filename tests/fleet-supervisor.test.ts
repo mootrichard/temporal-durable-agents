@@ -1,13 +1,19 @@
+import { rm } from 'node:fs/promises';
+import path from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
+
 import { expect, it } from 'vitest';
 
 import {
   decodeCodexHeartbeat,
   decodeHeartbeatStringArray,
   ensureTemporalReachable,
+  FleetSupervisor,
   shouldProjectTemporalProgress,
   temporalProgressWorkflowIds,
 } from '../src/supervisor/fleet-supervisor.js';
 import { applyRunEvent, createInitialSnapshot } from '../src/shared/run-snapshot.js';
+import { getDemoRoot } from '../src/runtime/workspace.js';
 
 it('decodes Temporal default JSON heartbeat payloads for test checkpoints', () => {
   const data = new TextEncoder().encode(
@@ -61,3 +67,38 @@ it('does not let pending Activity heartbeats overwrite a terminal run', () => {
   expect(shouldProjectTemporalProgress(running)).toBe(true);
   expect(shouldProjectTemporalProgress(failed)).toBe(false);
 });
+
+it('marks a completed baseline fleet offline after its process exits', async () => {
+  const previousDelay = process.env.FIXTURE_DELAY_MS;
+  process.env.FIXTURE_DELAY_MS = '0';
+  const supervisor = new FleetSupervisor();
+  let runId: string | undefined;
+
+  try {
+    let snapshot = await supervisor.start('baseline', 'fixture');
+    runId = snapshot.runId;
+    const deadline = Date.now() + 10_000;
+    while (
+      Date.now() < deadline
+      && (snapshot.phase !== 'complete' || snapshot.workersOnline)
+    ) {
+      // This integration boundary can only observe the detached child through supervisor snapshots.
+      await delay(25);
+      snapshot = await supervisor.snapshot(runId);
+    }
+
+    expect(snapshot.phase).toBe('complete');
+    expect(snapshot.workersOnline).toBe(false);
+    expect(snapshot.frozen).toBe(false);
+  } finally {
+    await supervisor.close();
+    if (runId) {
+      await rm(path.join(getDemoRoot(), '.demo-runs', runId), {
+        recursive: true,
+        force: true,
+      });
+    }
+    if (previousDelay === undefined) delete process.env.FIXTURE_DELAY_MS;
+    else process.env.FIXTURE_DELAY_MS = previousDelay;
+  }
+}, 15_000);

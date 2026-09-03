@@ -193,6 +193,34 @@ it('restores heartbeated test filenames and skips them on a replacement Worker',
   }
 }, 120_000);
 
+it('reports retries when a Codex Activity exhausts its retry policy', async () => {
+  const runId = 'temporal-codex-exhausted';
+  const taskQueue = `test-${runId}`;
+  const workspace = await createRunWorkspace(runId, { baseDirectory: temporaryDirectory });
+  let attempts = 0;
+  const alwaysFailingCodex = async (): Promise<CodexActivityResult> => {
+    attempts += 1;
+    throw new Error('Codex unavailable');
+  };
+  const worker = await Worker.create({
+    connection: environment.nativeConnection,
+    taskQueue,
+    workflowsPath: new URL('../src/temporal/workflows.ts', import.meta.url).pathname,
+    activities: activitySet(alwaysFailingCodex),
+  });
+  const handle = await environment.client.workflow.start(FixWorkflow, {
+    workflowId: runId,
+    taskQueue,
+    args: [{ runId, runnerMode: 'fixture', workspace }],
+  });
+
+  const result = await worker.runUntil(handle.result());
+
+  expect(result.phase).toBe('failed');
+  expect(attempts).toBe(5);
+  expect(result.metrics.retriedCodexTurns).toBe(4);
+}, 30_000);
+
 function activitySet(
   runCodexTurn: (input: CodexActivityInput) => Promise<CodexActivityResult>,
   runTestsOverride?: (input: { workspace: string; phase: 'initial' | 'final' }) => Promise<{

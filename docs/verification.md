@@ -39,7 +39,7 @@ The baseline sequence killed `baseline-1ad9804a` and its process group. Its rest
 
 ## Automated deterministic supervisor sequence
 
-The Playwright run generates fresh random run IDs. It kills Act I during investigation, verifies a zeroed restart response, then kills Act II after Temporal reports a durable `3 / 4` test checkpoint. Replacement Workers finish at `4 / 4` with four completed Codex turns, zero Codex retries, and the one-line diff. The interrupted operation in this variant is the test Activity; the separate integration suite covers interrupted Codex resumption.
+The Playwright run generates fresh random run IDs. It kills Act I during investigation, verifies a zeroed restart response, then kills Act II during final verification with a visible partial test checkpoint. Replacement Workers finish at `4 / 4` with four completed Codex turns, zero Codex retries, and the one-line diff. The interrupted operation in this variant is the test Activity; the separate integration suite covers interrupted Codex resumption and exact file-checkpoint reuse.
 
 Visual receipts:
 
@@ -48,13 +48,15 @@ Visual receipts:
 
 ## Automated evidence
 
+Checks refreshed on 2026-09-03:
+
 ```text
 npm test
-Test Files  8 passed
-Tests       18 passed
+Test Files  12 passed
+Tests       38 passed
 
 npm run test:e2e
-1 passed
+2 passed
 
 npm run check
 passed
@@ -70,8 +72,17 @@ The Temporal integration tests start a real ephemeral server. They prove:
 
 - completed Child Workflow reuse while an interrupted Codex Activity retries;
 - production `runCodexTurn` restoration of the heartbeated thread ID;
-- file-level heartbeat restoration, with every test filename executed exactly once across Worker replacement.
+- file-level heartbeat restoration, with every test filename executed exactly once across Worker replacement;
+- accurate retry metrics when a Codex Activity exhausts all five attempts.
 
-The Playwright test starts its own Temporal server and production API, drives the presentation controls, invokes the real supervisor kill/restart endpoints, verifies baseline reset, and waits for the recovered Temporal diff.
+The fixture tests also prove that replaying an implementation Activity accepts
+the exact fixed workspace state. The supervisor tests prove that a completed
+baseline process reports its fleet offline.
+
+The Playwright tests start their own Temporal server and production API. They
+drive the presentation controls, invoke the real supervisor kill and restart
+endpoints, verify baseline reset, and wait for the recovered Temporal diff.
+They also verify that a completed Temporal run requires Worker cleanup before
+the UI offers another run.
 
 The Docker presentation path was not executed during this receipt because the local Docker daemon was stopped. The same Worker/API path was exercised against Temporal CLI development servers launched by the SDK test harness.

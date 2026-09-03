@@ -123,18 +123,18 @@ describe('run snapshot', () => {
     });
   });
 
-  it('offers a new run after a Temporal run completes with workers online', () => {
+  it('requires cleanup after a Temporal run completes with workers online', () => {
     const completed = applyRunEvent(
       createInitialSnapshot('run-1', 'temporal', 'live'),
       { type: 'complete', summary: 'Fixed and verified', diff: '+ fix' },
     );
 
     expect(deriveRunControlState(completed)).toMatchObject({
-      action: 'start-new',
-      actionLabel: 'Start new run',
-      runActive: false,
+      action: 'kill',
+      actionLabel: 'Kill workers',
+      runActive: true,
       runFinished: true,
-      showRunnerChoice: true,
+      showRunnerChoice: false,
     });
   });
 });

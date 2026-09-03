@@ -63,6 +63,8 @@ Open [the demo at `http://localhost:8787`](http://localhost:8787).
 5. Select **Temporal**. Click **Start run**.
 6. During the run, click **Kill workers**. Then click **Stop workers**.
 7. Click **Restart workers**. The same Workflow resumes and finishes the repair.
+8. After **Run complete**, click **Kill workers** and confirm **Stop workers**.
+   The UI offers **Start new run** after the fleet exits.
 
 If you use **Live Codex**, install the `codex` CLI. Then sign in:
 

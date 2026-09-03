@@ -67,10 +67,13 @@ progress returns to the beginning.
    **Stop workers**.
 4. Inspect the open Workflow in Temporal's development UI.
 5. In the demo, click **Restart workers**.
+6. After **Run complete**, click **Kill workers** and confirm **Stop workers**.
+7. Click **Start new run** when you want a separate execution.
 
 The replacement Worker replays Event History, reuses recorded results, and
 continues unfinished Activities. The final receipt shows four passing tests and
-the one-line retry fix.
+the one-line retry fix. The completed Workflow remains recorded after its
+run-specific Worker exits.
 
 ## Verify the repository
 

@@ -284,8 +284,22 @@ export function App() {
             <div className="run-status" aria-live="polite" role="status">
               <span className={snapshot.phase === 'failed' ? 'offline' : snapshot.workersOnline ? 'online' : 'offline'} />
               <div>
-                <strong>{snapshot.phase === 'failed' ? 'Run failed' : snapshot.workersOnline ? 'Running' : 'Workers stopped'}</strong>
-                <small>{snapshot.phase === 'failed' && snapshot.workersOnline ? 'Workers still online' : runnerMode === 'live' ? 'Live Codex' : 'Fixture runtime'}</small>
+                <strong>
+                  {snapshot.phase === 'failed'
+                    ? 'Run failed'
+                    : snapshot.phase === 'complete'
+                      ? 'Run complete'
+                      : snapshot.workersOnline
+                        ? 'Running'
+                        : 'Workers stopped'}
+                </strong>
+                <small>
+                  {(snapshot.phase === 'failed' || snapshot.phase === 'complete') && snapshot.workersOnline
+                    ? 'Workers still online'
+                    : runnerMode === 'live'
+                      ? 'Live Codex'
+                      : 'Fixture runtime'}
+                </small>
               </div>
             </div>
           )}
@@ -419,9 +433,11 @@ export function App() {
             <p id="stop-description">
               {snapshot.phase === 'failed'
                 ? 'This run has failed, but its worker fleet is still online. Stop the workers before starting a clean run.'
-                : mode === 'temporal'
-                ? 'Temporal keeps the run in Event History. Restarting the workers resumes from the last durable checkpoint.'
-                : 'The baseline stores this run in process memory. Stopping the workers clears its in-flight progress.'}
+                : snapshot.phase === 'complete'
+                  ? 'The run is complete. Stop its worker fleet before starting another run.'
+                  : mode === 'temporal'
+                    ? 'Temporal keeps the run in Event History. Restarting the workers resumes from the last durable checkpoint.'
+                    : 'The baseline stores this run in process memory. Stopping the workers clears its in-flight progress.'}
             </p>
             <div className="dialog-actions">
               <button ref={keepRunningRef} className="secondary-action" onClick={() => setConfirmKill(false)} type="button">Keep running</button>

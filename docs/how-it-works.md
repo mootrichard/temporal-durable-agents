@@ -273,6 +273,11 @@ The demo configures these Activity policies:
 | Maximum retry interval | 10 seconds | Caps retry backoff. |
 | Maximum attempts | 5 | Bounds repeated Activity attempts. |
 
+If `runCodexTurn` exhausts all five attempts, the Workflow recognizes
+Temporal's `MAXIMUM_ATTEMPTS_REACHED` failure state and records four retries in
+the failed snapshot. The retry counter therefore remains consistent with Event
+History on both successful and exhausted execution paths.
+
 Each Codex Activity also holds a five-second heartbeat lease. The Activity
 sends one heartbeat before it starts the Codex call, then repeats its current
 heartbeat payload every five seconds until the call settles. SDK checkpoints
@@ -409,6 +414,12 @@ stream or continue after the exact last item. The heartbeat records
 If the local session is missing or unavailable, the Activity starts a
 replacement thread with the same durable prompt and current Git workspace. The
 replacement preserves the assignment and code state while model work can repeat.
+
+The deterministic fixture runner makes its file edit replay-safe. It applies
+the known replacement when the defect is present, accepts the exact fixed state
+when an earlier attempt already wrote it, and rejects any other source state.
+This compare-and-set behavior covers the failure window between the file write
+and the Activity completion event.
 
 ### Test recovery
 

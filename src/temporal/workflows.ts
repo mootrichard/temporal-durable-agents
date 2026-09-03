@@ -1,3 +1,4 @@
+import { ActivityFailure, RetryState } from '@temporalio/common';
 import {
   defineQuery,
   executeChild,
@@ -31,10 +32,16 @@ import type {
   TemporalWorkflowResult,
 } from './contracts.js';
 
+const maximumActivityAttempts = 5;
+
 const activities = proxyActivities<ReturnType<typeof createActivities>>({
   startToCloseTimeout: '10 minutes',
   heartbeatTimeout: '20 seconds',
-  retry: { initialInterval: '1 second', maximumInterval: '10 seconds', maximumAttempts: 5 },
+  retry: {
+    initialInterval: '1 second',
+    maximumInterval: '10 seconds',
+    maximumAttempts: maximumActivityAttempts,
+  },
 });
 
 export const snapshotQuery = defineQuery<RunSnapshot>('snapshot');
@@ -154,6 +161,7 @@ export async function FixWorkflow(input: FixWorkflowInput): Promise<TemporalWork
       diff,
     });
   } catch (error) {
+    recordExhaustedCodexRetries(emit, error);
     return emit({ type: 'failed', error: error instanceof Error ? error.message : String(error) });
   }
 }
@@ -228,4 +236,24 @@ function recordCodex(
   }
   for (let retry = 1; retry < result.activityAttempt; retry += 1) emit({ type: 'codex-retry' });
   emit({ type: 'codex-complete', ...result.usage });
+}
+
+function recordExhaustedCodexRetries(
+  emit: (event: RunEvent) => RunSnapshot,
+  error: unknown,
+): void {
+  let cause = error;
+  while (cause instanceof Error) {
+    if (
+      cause instanceof ActivityFailure
+      && cause.activityType === 'runCodexTurn'
+      && cause.retryState === RetryState.MAXIMUM_ATTEMPTS_REACHED
+    ) {
+      for (let retry = 1; retry < maximumActivityAttempts; retry += 1) {
+        emit({ type: 'codex-retry' });
+      }
+      return;
+    }
+    cause = cause.cause;
+  }
 }
