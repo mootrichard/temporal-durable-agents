@@ -20,6 +20,8 @@ the implementation from the API request through Worker loss and Workflow
 recovery. It also documents the guarantee boundary and provides a local run
 procedure.
 
+[Open the published walkthrough](https://mootrichard.github.io/temporal-durable-agents/).
+
 Start the documentation site:
 
 ```bash

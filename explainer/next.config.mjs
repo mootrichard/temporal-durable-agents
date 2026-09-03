@@ -18,9 +18,11 @@ const withMDX = createMDX({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   agentRules: false,
+  basePath: process.env.PAGES_BASE_PATH ?? '',
   output: 'export',
   pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
   reactStrictMode: true,
+  trailingSlash: true,
 };
 
 export default withMDX(nextConfig);
