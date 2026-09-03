@@ -1,0 +1,277 @@
+## !!steps Start a Workflow before the Worker
+
+!change Process start → Workflow start
+
+The original path starts one process. The Temporal path creates a stable
+Workflow ID, then starts a Worker for that Workflow.
+
+```ts !before src/supervisor/fleet-supervisor.ts · original process
+// The supervisor starts the coordinator process directly.
+// !focus(2:8)
+this.spawnBaseline(managed);
+
+private spawnBaseline(managed: ManagedRun): void {
+  this.spawnManaged(managed, 'src/baseline/process.ts', {
+    DEMO_RUN_ID: managed.runId,
+    DEMO_RUNNER_MODE: managed.runnerMode,
+    DEMO_WORKSPACE: managed.workspace,
+  });
+}
+```
+
+```ts !after src/supervisor/fleet-supervisor.ts · with Temporal
+if (mode === 'temporal') {
+  // !focus(1:6)
+  const client = await this.getTemporalClient();
+  await client.workflow.start(FixWorkflow, {
+    workflowId: runId,
+    taskQueue: temporalTaskQueue(runId),
+    args: [{ runId, runnerMode, workspace }],
+  });
+  this.spawnTemporalWorker(managed);
+} else {
+  this.spawnBaseline(managed);
+}
+```
+
+## !!steps Move the coordinator sequence into a Workflow
+
+!change Orchestrator method → Workflow function
+
+The sequence stays in TypeScript. Temporal records each scheduled command and
+completed result in Event History.
+
+```ts !before src/baseline/orchestrator.ts · original
+async run(
+  input: BaselineRunInput,
+  onSnapshot: (snapshot: RunSnapshot) => void = () => undefined,
+): Promise<RunSnapshot> {
+  let snapshot = createInitialSnapshot(
+    input.runId, 'baseline', input.runnerMode,
+  );
+  const emit = (event: RunEvent) => {
+    snapshot = applyRunEvent(snapshot, event);
+    onSnapshot(structuredClone(snapshot));
+    return snapshot;
+  };
+
+  // !focus(1:10)
+  const planTurn = await this.codex.run(
+    {
+      role: 'planner',
+      prompt: plannerPrompt,
+      workspace: input.workspace,
+      sandboxMode: 'read-only',
+      outputSchema: delegationPlanJsonSchema,
+    },
+    {
+      onCheckpoint: ({ threadId }) =>
+        emit({ type: 'node', id: 'coordinator', status: 'running', threadId }),
+      onProgress: progressReporter('coordinator', emit),
+    },
+  );
+}
+```
+
+```ts !after src/temporal/workflows.ts · with Temporal
+// !focus(1:4)
+export async function FixWorkflow(input: FixWorkflowInput) {
+  let snapshot = createInitialSnapshot(
+    input.runId, 'temporal', input.runnerMode,
+  );
+  const emit = (event: RunEvent) => {
+    snapshot = applyRunEvent(snapshot, event);
+    return snapshot;
+  };
+  setHandler(snapshotQuery, () => snapshot);
+
+  // !focus(1:7)
+  const planTurn = await activities.runCodexTurn({
+    role: 'planner',
+    prompt: plannerPrompt,
+    workspace: input.workspace,
+    sandboxMode: 'read-only',
+    runnerMode: input.runnerMode,
+    outputSchema: delegationPlanJsonSchema,
+  });
+}
+```
+
+```text !prompt src/codex/prompts.ts · coordinator planning prompt
+You are coordinating a small TypeScript bug fix in an isolated fixture repository.
+
+Return a delegation plan immediately with exactly two read-only investigations:
+1. one focused on the implementation;
+2. one focused on the test contract.
+
+Do not inspect files, run commands, or use tools during this planning turn. The delegated investigators own that work. Do not edit files. Keep each assignment bounded and evidence-oriented.
+```
+
+## !!steps Replace subagent methods with Child Workflows
+
+!change Method call → Child Workflow
+
+Each investigation gets a stable Child Workflow ID. The parent still waits for
+the same three results.
+
+```ts !before src/baseline/orchestrator.ts · original
+// !focus(1:5)
+const [sourceTurn, testTurn, initialTests] = await Promise.all([
+  this.runInvestigation(
+    input, sourceAssignment, 'source-investigator', emit,
+  ),
+  this.runInvestigation(
+    input, testAssignment, 'test-investigator', emit,
+  ),
+  this.runInitialTests(input.workspace, emit),
+]);
+```
+
+```ts !after src/temporal/workflows.ts · with Temporal
+// !focus(1:9)
+const sourcePromise = executeChild(SubagentWorkflow, {
+  workflowId: `${input.runId}-source-investigator`,
+  args: [{ ...input, assignment: source }],
+});
+const testPromise = executeChild(SubagentWorkflow, {
+  workflowId: `${input.runId}-test-investigator`,
+  args: [{ ...input, assignment: tests }],
+});
+const initialTestsPromise = activities.runTests({
+  workspace: input.workspace, phase: 'initial',
+});
+```
+
+## !!steps Put external work in Activities
+
+!change Direct effect → Activity
+
+Codex and the test runner perform external work. Activities give that work a
+timeout, retry policy, and cancellation signal.
+
+```ts !before src/baseline/orchestrator.ts · original
+private async runInvestigation(
+  input: BaselineRunInput,
+  assignment: SubagentAssignment,
+  nodeId: Extract<RunNode['id'],
+    'source-investigator' | 'test-investigator'>,
+  emit: (event: RunEvent) => RunSnapshot,
+) {
+  // !focus(1:8)
+  const result = await this.codex.run({
+    role: nodeId,
+    prompt: investigationPrompt(assignment.prompt),
+    workspace: input.workspace,
+    sandboxMode: 'read-only',
+  });
+  return result;
+}
+```
+
+```ts !after src/temporal/workflows.ts · with Temporal
+const activities = proxyActivities<ReturnType<typeof createActivities>>({
+  // !focus(1:3)
+  startToCloseTimeout: '10 minutes',
+  heartbeatTimeout: '20 seconds',
+  retry: {
+    initialInterval: '1 second',
+    maximumInterval: '10 seconds',
+    maximumAttempts: 5,
+  },
+});
+
+export async function SubagentWorkflow(input: SubagentWorkflowInput) {
+  // !focus(1:7)
+  const role = input.assignment.focus === 'source'
+    ? 'source-investigator'
+    : 'test-investigator';
+  const codex = await activities.runCodexTurn({
+    role,
+    prompt: investigationPrompt(input.assignment.prompt),
+    workspace: input.workspace,
+  });
+  return { assignment: input.assignment, codex };
+}
+```
+
+```text !prompt src/codex/prompts.ts · investigator prompts
+SOURCE INVESTIGATOR
+Inspect src/retry.ts. Identify the defect and return evidence with a minimal fix recommendation. Do not edit files.
+
+Return a concise finding with filenames, evidence, and a minimal recommendation. Do not edit files.
+
+TEST INVESTIGATOR
+Inspect tests/*.test.ts. Explain the retry contract and identify the failing expectation. Do not edit files.
+
+Return a concise finding with filenames, evidence, and a minimal recommendation. Do not edit files.
+```
+
+## !!steps Save retry hints in heartbeats
+
+!change Memory callback → Activity heartbeat
+
+The Activity heartbeats its Codex thread ID and recent progress. A retry reads
+those details before it starts work.
+
+```ts !before src/baseline/orchestrator.ts · original
+const result = await this.codex.run(
+  request,
+  {
+    // !focus(1:2)
+    onCheckpoint: ({ threadId }) =>
+      emit({ type: 'node', id: nodeId, status: 'running', threadId }),
+    onProgress: progressReporter(nodeId, emit),
+  },
+);
+```
+
+```ts !after src/temporal/activities.ts · with Temporal
+const context = Context.current();
+// !focus(1:2)
+const checkpoint = asCodexHeartbeat(context.info.heartbeatDetails);
+const durableThreadId = checkpoint?.threadId ?? input.threadId;
+
+return executeCodex(
+  runner,
+  { ...input, threadId: durableThreadId },
+  replacementThread,
+);
+
+// Inside executeCodex:
+// !focus(1:4)
+onCheckpoint: ({ threadId, lastItemId }) => {
+  heartbeat = { ...heartbeat, threadId, lastItemId };
+  context.heartbeat(heartbeat);
+},
+```
+
+## !!steps Restart compute against the same history
+
+!change Fresh run → Replay and continue
+
+The baseline creates a new workspace. The Temporal path starts only a
+replacement Worker, so it does not create a second Workflow.
+
+```ts !before src/supervisor/fleet-supervisor.ts · original
+if (managed.mode === 'baseline') {
+  // !focus(1:5)
+  managed.workspace = await createRunWorkspace(runId);
+  managed.snapshot = createInitialSnapshot(
+    runId, managed.mode, managed.runnerMode,
+  );
+  this.spawnBaseline(managed);
+}
+```
+
+```ts !after src/supervisor/fleet-supervisor.ts · with Temporal
+if (managed.mode === 'temporal') {
+  // !focus(1:7)
+  managed.snapshot = {
+    ...managed.snapshot,
+    workersOnline: true,
+    frozen: false,
+    error: undefined,
+  };
+  this.spawnTemporalWorker(managed);
+}
+```

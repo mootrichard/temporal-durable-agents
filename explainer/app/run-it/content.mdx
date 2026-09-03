@@ -1,0 +1,105 @@
+<main id="main-content" className="prose-page page-shell">
+
+<header className="doc-hero prose-hero">
+
+<p className="eyebrow">How-to guide · local environment</p>
+
+# Kill the workers and observe recovery
+
+Run both acts with the deterministic fixture. The baseline loses its in-memory
+continuation, while the Temporal run resumes from recorded history.
+
+</header>
+
+## Before you begin
+
+Install Node.js 24 or later, npm, Docker, and Chromium for Playwright. The live
+Codex path also requires the `codex` CLI and a local Codex login.
+
+## Start the application
+
+1. Install the dependencies and Chromium:
+
+   ```bash package installation
+   npm install
+   npx playwright install chromium
+   ```
+
+2. Start Temporal:
+
+   ```bash local services
+   npm run temporal:up
+   ```
+
+3. Build and start the application:
+
+   ```bash demo server
+   npm run build
+   npm start
+   ```
+
+4. Open [the local demo](http://localhost:8787). Temporal's
+   [development UI](http://localhost:8233) is available on port `8233`.
+
+For the Live Codex path, verify the Codex login and Temporal connection before
+you start the application:
+
+```bash live mode preflight
+npm run preflight
+```
+
+## Reproduce process-owned failure
+
+1. Select **Baseline** and **Fixture**.
+2. Click **Start run**.
+3. After the investigators begin, click **Kill workers**, then confirm
+   **Stop workers**.
+4. Click **Restart workers**.
+
+The baseline creates a fresh workspace and starts a new in-memory run. Its
+progress returns to the beginning.
+
+## Recover the history-owned run
+
+1. Select **Temporal** and **Fixture**.
+2. Click **Start run**.
+3. After at least one branch completes, click **Kill workers**, then confirm
+   **Stop workers**.
+4. Inspect the open Workflow in Temporal's development UI.
+5. In the demo, click **Restart workers**.
+
+The replacement Worker replays Event History, reuses recorded results, and
+continues unfinished Activities. The final receipt shows four passing tests and
+the one-line retry fix.
+
+## Verify the repository
+
+Run the automated checks from the repository root:
+
+```bash verification
+npm test
+npm run test:e2e
+npm run check
+npm run build
+npm run docs:build
+```
+
+The Playwright suite drives both acts through the real kill and restart endpoints.
+The Temporal integration suite interrupts Activity execution and verifies that a
+completed Child Workflow runs once.
+
+## Stop local services
+
+After the demonstration, stop the Temporal container:
+
+```bash cleanup
+npm run temporal:down
+```
+
+<aside className="prose-notice">
+<strong>Demo boundary.</strong> This local demonstration keeps Codex sessions and
+run worktrees on one machine. It proves recovery from Worker-process loss, not
+recovery from host or disk loss.
+</aside>
+
+</main>

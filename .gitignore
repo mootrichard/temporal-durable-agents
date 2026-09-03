@@ -5,6 +5,8 @@ test-results/
 .demo-runs/
 .demo-state/
 .vite/
+.next/
+explainer/out/
 .playwright-cli/
 .playwright-mcp/
 

@@ -13,6 +13,23 @@ notes for a detailed Temporal code walkthrough.
 
 ![The recovered Temporal execution tree](output/playwright/temporal-recovered.png)
 
+## Read the interactive explainer
+
+The `explainer/` directory contains a Code Hike documentation site that traces
+the implementation from the API request through Worker loss and Workflow
+recovery. It also documents the guarantee boundary and provides a local run
+procedure.
+
+Start the documentation site:
+
+```bash
+npm install
+npm run docs:dev
+```
+
+Open [the local explainer](http://localhost:3000). Build the static site with
+`npm run docs:build`; Next.js writes the export to `explainer/out/`.
+
 ## Run the live demo
 
 Requirements: Node 24+, npm, Docker, the `codex` CLI, and a local Codex login.
@@ -185,6 +202,7 @@ The suite saves browser receipts under `output/playwright/`.
 
 ## More detail
 
+- [Interactive Code Hike explainer](explainer/)
 - [Slideshow presenter guide](slideshow/README.md)
 - [How the durable agent tree works](docs/how-it-works.md)
 - [Architecture and state ownership](docs/architecture.md)
