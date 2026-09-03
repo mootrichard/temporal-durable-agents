@@ -540,21 +540,22 @@ The most important visual change occurs after the same physical failure:
 
 ### Run controls separate run state from Worker state
 
-A terminal Workflow result doesn't stop the Temporal Worker process. The UI
-therefore derives its primary action from both the run phase and the Worker
-fleet state:
+The supervisor stops a run-specific Temporal Worker after it observes a
+terminal Workflow result. It waits for the process to close, marks the fleet
+offline, and returns the terminal snapshot. The browser can then offer a new run
+without exposing a cleanup action for completed work.
 
 | Situation | Primary action | Meaning |
 | --- | --- | --- |
 | No run exists | **Start run** | Create an isolated workspace and launch the selected runtime. |
 | A nonterminal run has Workers | **Kill workers** | Stop the recorded process group. |
 | A nonterminal run is frozen | **Restart workers** | Restore compute; Temporal continues the same run, while the baseline starts again from an empty in-memory snapshot. |
-| A Temporal run is terminal but its Workers remain online | **Kill workers** | Clean up compute before offering another run. |
-| A baseline run is terminal, or a terminal Temporal run has no Workers | **Start new run** | Choose the runner and create a separate execution. |
+| A terminal run has no Workers | **Start new run** | Choose the runner and create a separate execution. |
 
-This state model keeps a failed run visible as **Run failed** while also showing
-**Workers still online** when cleanup remains. A completed or failed phase and
-an online Worker fleet are separate facts.
+The browser stores the selected mode, runner, and run IDs in local storage. On
+page refresh, it asks the surviving API supervisor for fresh snapshots instead
+of treating browser storage as execution state. If the API restarts, its
+in-memory run registry is gone and stale browser run IDs are discarded.
 
 ## Five sentences to remember
 

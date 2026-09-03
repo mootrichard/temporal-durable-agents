@@ -66,9 +66,10 @@ Wait for **Run complete**. Point in this order:
 
 > “Same execution tree, different Worker fleet. The Worker executes the work; it does not own the work.”
 
-Click **Kill workers**, then confirm **Stop workers**. Point to **Start new run**.
+The supervisor stops the run-specific Worker after it observes the terminal
+Workflow result. Point to **Start new run**.
 
-> “The Workflow result remains in Event History after its run-specific Worker exits. The next run gets a separate Workflow ID, workspace, Task Queue, and Worker.”
+> “The Workflow result remains in Event History after compute exits. The next run gets a separate Workflow ID, workspace, Task Queue, and Worker.”
 
 ## 8:15–10:15 — Honest boundary
 

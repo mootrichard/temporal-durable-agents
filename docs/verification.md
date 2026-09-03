@@ -82,7 +82,7 @@ baseline process reports its fleet offline.
 The Playwright tests start their own Temporal server and production API. They
 drive the presentation controls, invoke the real supervisor kill and restart
 endpoints, verify baseline reset, and wait for the recovered Temporal diff.
-They also verify that a completed Temporal run requires Worker cleanup before
-the UI offers another run.
+They also verify page-refresh restoration and automatic Worker shutdown after a
+terminal Temporal result.
 
 The Docker presentation path was not executed during this receipt because the local Docker daemon was stopped. The same Worker/API path was exercised against Temporal CLI development servers launched by the SDK test harness.

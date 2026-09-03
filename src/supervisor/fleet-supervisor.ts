@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process';
+import { once } from 'node:events';
 import { randomUUID } from 'node:crypto';
 import { Socket } from 'node:net';
 import path from 'node:path';
@@ -89,6 +90,16 @@ export class FleetSupervisor {
         if (!isQueryTemporarilyUnavailable(error)) throw error;
       }
       await this.refreshTemporalProgress(managed);
+      if (
+        (managed.snapshot.phase === 'complete' || managed.snapshot.phase === 'failed')
+        && managed.target
+        && managed.process
+      ) {
+        managed.expectedExit = true;
+        const closed = once(managed.process, 'close');
+        terminateProcessGroup(managed.target, this.ownerToken, 'SIGTERM');
+        await closed;
+      }
     }
     return structuredClone(managed.snapshot);
   }

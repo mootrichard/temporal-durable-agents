@@ -76,6 +76,7 @@ result. For the full sequence and its recovery limits, see
 | Passed test filenames | Activity heartbeat details | Retried Activity skips completed files |
 | Live Codex progress | Pending Activity heartbeat details | Supervisor projects progress until the Activity completes |
 | UI while Workers are absent | API’s last successful query | Rendered as a visibly frozen snapshot |
+| Browser run selection | Browser local storage | Page refresh reloads current snapshots from the surviving API supervisor |
 | Worker PID/PGID | Supervisor memory | Validated before targeting the exact detached group |
 
 ## Failure semantics
