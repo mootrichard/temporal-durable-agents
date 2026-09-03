@@ -11,7 +11,7 @@ export default function HomePage() {
   return (
     <main id="main-content">
       <section className="intro-hero page-shell">
-        <p className="eyebrow">Interview code walkthrough</p>
+        <p className="eyebrow">Agent orchestration walkthrough</p>
         <h1>One bug. Two execution models.</h1>
         <p className="hero-summary">
           A coordinator delegates two investigations of a retry bug. The

@@ -6,11 +6,11 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Durable agent repair · interview walkthrough',
+    default: 'Durable agent repair · architecture walkthrough',
     template: '%s · Durable agent repair',
   },
   description:
-    'An interview walkthrough of process-owned orchestration and Temporal recovery.',
+    'A walkthrough of process-owned orchestration and Temporal recovery.',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

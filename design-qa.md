@@ -4,11 +4,11 @@
 
 - Source visual truth: `/Users/richardmoot/.codex/generated_images/01a0172d-6ae3-79d1-98fb-4c79ffd11a24/exec-de7b7f71-d19b-42a7-a1a5-c49ba0f95cdc.png`
 - Rendered implementation: `http://localhost:5173/`
-- Implementation screenshot: `/Users/richardmoot/Projects/temporal-interview-two/output/design-qa/implementation-investigating-final.png`
+- Implementation screenshot: `output/design-qa/implementation-investigating-final.png`
 - Viewport and pixels: source `1487 x 1058`; implementation CSS viewport `1487 x 1058` at device scale factor `1`, captured as `1487 x 1058` pixels. Both artifacts use the same crop and density, so the final pass required no density normalization.
 - State: Temporal durability mode, fixture runtime, `investigating` phase, test investigator selected and expanded.
-- Full-view comparison evidence: `/Users/richardmoot/Projects/temporal-interview-two/output/design-qa/comparison-final-full.png`
-- Focused comparison evidence: `/Users/richardmoot/Projects/temporal-interview-two/output/design-qa/comparison-final-header.png` and `/Users/richardmoot/Projects/temporal-interview-two/output/design-qa/comparison-final-tree.png`
+- Full-view comparison evidence: `output/design-qa/comparison-final-full.png`
+- Focused comparison evidence: `output/design-qa/comparison-final-header.png` and `output/design-qa/comparison-final-tree.png`
 
 ## Findings
 
@@ -43,7 +43,7 @@ No actionable P0, P1, or P2 findings remain.
 
 ### Iteration 1
 
-- Evidence: `/Users/richardmoot/Projects/temporal-interview-two/output/design-qa/comparison-v1.png`
+- Evidence: `output/design-qa/comparison-v1.png`
 - [P2] The execution column was too wide and the coordinator sat too far left compared with the source.
 - [P2] An extra phase kicker, oversized heading, gray canvas, and explanatory footer changed above-the-fold density.
 - [P2] The coordinator-to-worker connector and worker rhythm placed the first worker roughly `17px` too high.
@@ -51,7 +51,7 @@ No actionable P0, P1, or P2 findings remain.
 
 ### Final pass
 
-- Evidence: `/Users/richardmoot/Projects/temporal-interview-two/output/design-qa/comparison-final-full.png`, plus the focused header and execution-tree comparisons above.
+- Evidence: `output/design-qa/comparison-final-full.png`, plus the focused header and execution-tree comparisons above.
 - Result: major-region geometry, hierarchy, typography, surface treatment, and interaction emphasis align with the selected source. Remaining differences are the expected P3 runtime and icon-family deviations listed above.
 
 ## Primary interactions tested

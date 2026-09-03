@@ -1,6 +1,6 @@
 # Durable agent tree explainer
 
-This static site supports an interview walkthrough of the demo. It first traces
+This static site provides an architecture walkthrough of the demo. It first traces
 an application-managed agent protocol. It then compares process-owned
 orchestration with its Temporal replacement.
 

@@ -11,7 +11,6 @@ export function SiteHeader() {
         </span>
         <span>
           Durable agent repair
-          <small>Interview walkthrough</small>
         </span>
       </Link>
       <nav aria-label="Explainer documentation">

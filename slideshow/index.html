@@ -41,7 +41,7 @@
   <body>
     <hyperframes-slideshow
       tabindex="0"
-      notes-storage-key="durable-agent-tree-interview-deck"
+      notes-storage-key="durable-agent-tree-deck"
     >
       <hyperframes-player interactive src="composition/index.html"></hyperframes-player>
 
@@ -76,7 +76,7 @@
           { "sceneId": "trace-completion", "notes": "The final test Activity verifies all four files, then getDiff reads the isolated Git workspace. The Workflow emits one complete RunSnapshot containing the summary and diff. That result is the durable completion receipt shown in the interface." },
           { "sceneId": "trace-proof", "notes": "Show executable evidence. One integration test proves that a completed child runs once, an interrupted child runs twice, the heartbeated thread ID is resumed, and the Workflow completes. A second proves that every checkpointed final-phase test file executes once across Worker replacement." },
           { "sceneId": "boundary", "notes": "Draw the boundary precisely. Temporal owns Workflow identity, Event History, replay, timeouts, retries, and recorded results. Application code owns idempotency, reconciliation, durable artifact storage, safe external effects, and model correctness." },
-          { "sceneId": "close", "notes": "Close with the interview answer: a Worker is replaceable compute. Event History owns the durable continuation. Heartbeats carry application-defined progress into later Activity attempts. Side-effect safety remains explicitly application-owned." }
+          { "sceneId": "close", "notes": "Close with the core answer: a Worker is replaceable compute. Event History owns the durable continuation. Heartbeats carry application-defined progress into later Activity attempts. Side-effect safety remains explicitly application-owned." }
         ],
         "slideSequences": [
           { "id": "event-history", "label": "Event History microscope", "slides": [
