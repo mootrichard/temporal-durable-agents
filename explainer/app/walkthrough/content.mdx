@@ -15,8 +15,11 @@ const planTurn = await runCodex('coordinator', {
 });
 
 const plan = parseDelegationPlan(JSON.parse(planTurn.finalResponse));
-const sourceAssignment = assignmentFor(plan, 'source');
-const testAssignment = assignmentFor(plan, 'tests');
+const [sourceTurn, testTurn, initialTests] = await Promise.all([
+  investigate(assignmentFor(plan, 'source')),
+  investigate(assignmentFor(plan, 'tests')),
+  this.runTests(input.workspace),
+]);
 ```
 
 ```text !prompt src/codex/prompts.ts · coordinator planning prompt
@@ -38,7 +41,7 @@ is inserted at the top of the investigator prompt.
 
 ```ts ! src/baseline/orchestrator.ts
 // Called once for source and once for tests inside Promise.all.
-// !focus(2:6)
+// !focus(1:5)
 const result = await runCodex(nodeId, {
   role: nodeId,
   prompt: investigationPrompt(assignment.prompt),
@@ -92,7 +95,7 @@ The application combines both reports with the failing tests. It resumes the
 coordinator thread to implement the fix.
 
 ```ts ! src/baseline/orchestrator.ts
-// !focus(1:9)
+// !focus(1:13)
 const implementation = await runCodex('coordinator', {
   role: 'implementer',
   prompt: implementationPrompt(

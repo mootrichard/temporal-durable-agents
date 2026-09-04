@@ -14,7 +14,7 @@ Use sources in this order when they disagree:
    relationships.
 3. The pinned Temporal Developer skill supplies operational and SDK-specific
    guidance.
-4. The root `CONTEXT.md` defines Chaos City language and project-specific mappings.
+4. [`docs/architecture.md`](../docs/architecture.md) defines this demo's language and its mapping onto Temporal concepts.
 
 Treat release stages, minimum versions, CLI flags, and SDK APIs as version-sensitive
 facts. Verify them against current official documentation before changing code or
@@ -33,9 +33,9 @@ giving operational instructions.
 4. **Load the smallest reference bundle.** Use the routing table below. For code,
    load the upstream language overview first and then only the topic references
    required by the task.
-5. **Apply project language.** Map Temporal concepts to `CONTEXT.md` after the
-   platform concepts are clear. Keep the Temporal and Chaos City names visible when
-   teaching the mapping.
+5. **Apply project language.** Map Temporal concepts to the demo vocabulary in
+   `docs/architecture.md` after the platform concepts are clear. Keep both the
+   Temporal and demo names visible when teaching the mapping.
 6. **Separate the answer.** Label or clearly distinguish Temporal facts, project
    design rules, and version-sensitive operational guidance.
 7. **Verify completion.** Every changed Temporal concept has a source; every code

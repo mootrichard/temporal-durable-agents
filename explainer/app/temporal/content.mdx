@@ -7,7 +7,7 @@ Workflow ID, then starts a Worker for that Workflow.
 
 ```ts !before src/supervisor/fleet-supervisor.ts · original process
 // The supervisor starts the coordinator process directly.
-// !focus(2:6)
+// !focus(1:5)
 this.spawnFleet(managed);
 
 private spawnFleet(managed: ManagedRun): void {
@@ -75,7 +75,7 @@ export async function FixWorkflow(input: FixWorkflowInput) {
   };
   setHandler(snapshotQuery, () => snapshot);
 
-  // !focus(1:7)
+  // !focus(1:8)
   const planTurn = await activities.runCodexTurn({
     role: 'planner',
     prompt: plannerPrompt,
@@ -114,7 +114,7 @@ const [sourceTurn, testTurn, initialTests] = await Promise.all([
 ```
 
 ```ts !after src/temporal/workflows.ts · with Temporal
-// !focus(1:9)
+// !focus(1:8)
 const investigate = async (assignment: SubagentAssignment) => {
   const nodeId = investigatorFor[assignment.focus];
   return executeChild(SubagentWorkflow, {
@@ -164,11 +164,12 @@ const activities = proxyActivities<Activities>({
 });
 
 export async function SubagentWorkflow(input: SubagentWorkflowInput) {
-  // !focus(1:5)
+  // !focus(1:6)
   const codex = await activities.runCodexTurn({
     role: investigatorFor[input.assignment.focus],
     prompt: investigationPrompt(input.assignment.prompt),
     workspace: input.workspace,
+    sandboxMode: 'read-only',
   });
   return { assignment: input.assignment, codex };
 }

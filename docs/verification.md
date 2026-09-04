@@ -65,7 +65,7 @@ Checks refreshed on 2026-09-03:
 ```text
 npm test
 Test Files  12 passed
-Tests       38 passed
+Tests       35 passed
 
 npm run test:e2e
 2 passed

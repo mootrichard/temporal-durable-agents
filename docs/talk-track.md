@@ -54,7 +54,7 @@ Select **Test runner** and point to the **Test checkpoint** card.
 Click **Kill workers** before the run completes. In the **Stop every worker?**
 dialog, click **Stop workers**.
 
-> “The Worker and its subprocesses are gone. This frozen view is the API’s last successful Workflow Query. The Temporal Service still stores the Event History.”
+> “The Worker and its subprocesses are gone. This frozen view is the API’s last successful Workflow Query plus the last Activity heartbeat it read. The Temporal Service still stores the Event History.”
 
 Click **Agent consoles**. Point to **Fleet offline** and the retained events,
 then close the dialog. Click **Workflow timeline**. Point to **Compute offline**

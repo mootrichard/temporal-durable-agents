@@ -207,7 +207,7 @@ coordinator plans first, waits for the independent findings, and resumes with
 the gathered evidence. Both investigators run in read-only sandboxes.
 
 The fixture runner follows the same `CodexRunner` interface as the live SDK. It
-emits deterministic checkpoints and trace events, then applies the known patch
+emits a deterministic thread ID and trace events, then applies the known patch
 during the implementation turn. Fixture mode provides predictable stage timing;
 Live Codex mode exercises the authenticated SDK and actual streamed events.
 
@@ -285,7 +285,7 @@ paths.
 Each `runCodexTurn` Activity Execution also holds a five-second heartbeat lease.
 Its Activity code sends one heartbeat before it starts the Codex call, then
 repeats its current heartbeat payload every five seconds until the call settles.
-SDK checkpoints and progress events still trigger immediate heartbeats. The lease prevents a
+Thread-ID and progress events still trigger immediate heartbeats. The lease prevents a
 quiet model turn from crossing the 20-second heartbeat timeout; it doesn't
 claim that the model made new progress during each interval.
 
@@ -552,7 +552,7 @@ Each UI element answers one architectural question.
 | Workflow timeline | Which parent, child, and Activity spans are recorded in Event History? |
 | Recorded and retried turn counters | Which model turns completed, and how much retry occurred? |
 | Test checkpoint | How much file-level verification can a retry reuse? |
-| State ownership ledger | Which system can recover each kind of state? |
+| Ownership note | Which system holds the run state for the selected mode? |
 | Frozen snapshot stamp | Is this a current query result or the API's last known view? |
 | Final diff | Did the run produce a bounded, inspectable code effect? |
 

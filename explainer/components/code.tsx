@@ -76,9 +76,11 @@ function sourcePathFromMeta(meta: string): string | undefined {
   return meta.match(/^(src\/[^\s·]+|fixture\/[^\s·]+|tests\/[^\s·]+|scripts\/[^\s·]+)/)?.[1];
 }
 
+const sourceRef = process.env.NEXT_PUBLIC_SOURCE_REF ?? 'main';
+
 function githubSourceUrl(sourcePath: string): string {
   const encodedPath = sourcePath.split('/').map(encodeURIComponent).join('/');
-  return `https://github.com/mootrichard/temporal-durable-agents/blob/main/${encodedPath}`;
+  return `https://github.com/mootrichard/temporal-durable-agents/blob/${sourceRef}/${encodedPath}`;
 }
 
 function languageLabel(language: string): string {

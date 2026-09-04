@@ -197,9 +197,9 @@ This version makes four deliberate cuts:
 3. It models Worker performance concepts from the guide overview. Detailed metric
    names, configuration keys, SDK differences, and release availability belong in a
    later operational module.
-4. It keeps Chaos City concepts separate. A later alignment module can state that a
-   City Project is orchestrated by a Workflow Execution or that a Work Order is
-   implemented through an Activity without redefining either vocabulary.
+4. It keeps this demo's concepts separate. A later alignment module can state that
+   a run is orchestrated by a Workflow Execution or that a Codex turn is implemented
+   through an Activity without redefining either vocabulary.
 
 ## Proposed next questions
 
@@ -209,5 +209,5 @@ This version makes four deliberate cuts:
   guidance?
 - Which Temporal documentation release or review cadence should ontology versions
   track?
-- Should the next module map Chaos City terms, TypeScript SDK APIs, or production
+- Should the next module map the demo's terms, TypeScript SDK APIs, or production
   operations?

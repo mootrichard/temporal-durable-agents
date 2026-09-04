@@ -31,7 +31,7 @@ from decisive cuts, strong hierarchy, and real proof rather than layered motion.
 - ../../output/playwright/temporal-recovered.png — recovered execution tree and completion receipt.
 - ../../output/playwright/baseline-killed.png — process-owned failure state.
 - ../../output/playwright/agent-consoles-live.png — four-pane live agent console.
-- ../../output/playwright/temporal-live-heartbeats.png — in-flight heartbeat and progress evidence.
+- ../../output/playwright/workflow-timeline-frozen.png — Workflow timeline while the Worker fleet is offline.
 - ../../output/playwright/slideshow-code-trace-replay.png — existing replay/code-trace visual.
 - ../../docs/architecture.md — architecture, state ownership, and failure semantics.
 - ../../docs/presentation-outline.md — source narrative and Temporal primitive mapping.
