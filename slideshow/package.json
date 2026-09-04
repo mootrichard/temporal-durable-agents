@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "present": "npx hyperframes present ./composition",
+    "present": "python3 -m http.server 3004",
     "check": "npx hyperframes check ./composition",
     "snapshot": "npx hyperframes snapshot ./composition --frames 11"
   }
