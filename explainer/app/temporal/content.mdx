@@ -7,14 +7,14 @@ Workflow ID, then starts a Worker for that Workflow.
 
 ```ts !before src/supervisor/fleet-supervisor.ts · original process
 // The supervisor starts the coordinator process directly.
-// !focus(2:8)
-this.spawnBaseline(managed);
+// !focus(2:6)
+this.spawnFleet(managed);
 
-private spawnBaseline(managed: ManagedRun): void {
-  this.spawnManaged(managed, 'src/baseline/process.ts', {
-    DEMO_RUN_ID: managed.runId,
-    DEMO_RUNNER_MODE: managed.runnerMode,
-    DEMO_WORKSPACE: managed.workspace,
+private spawnFleet(managed: ManagedRun): void {
+  const entrypoint = 'src/baseline/process.ts';
+  const child = spawn(process.execPath, ['--import', 'tsx', entrypoint], {
+    detached: true,
+    env: { ...process.env, DEMO_RUN_ID: managed.runId, DEMO_WORKSPACE: managed.workspace },
   });
 }
 ```
@@ -28,10 +28,8 @@ if (mode === 'temporal') {
     taskQueue: temporalTaskQueue(runId),
     args: [{ runId, runnerMode, workspace }],
   });
-  this.spawnTemporalWorker(managed);
-} else {
-  this.spawnBaseline(managed);
 }
+this.spawnFleet(managed);
 ```
 
 ## !!steps Move the coordinator sequence into a Workflow
@@ -55,21 +53,13 @@ async run(
     return snapshot;
   };
 
-  // !focus(1:10)
-  const planTurn = await this.codex.run(
-    {
-      role: 'planner',
-      prompt: plannerPrompt,
-      workspace: input.workspace,
-      sandboxMode: 'read-only',
-      outputSchema: delegationPlanJsonSchema,
-    },
-    {
-      onCheckpoint: ({ threadId }) =>
-        emit({ type: 'node', id: 'coordinator', status: 'running', threadId }),
-      onProgress: progressReporter('coordinator', emit),
-    },
-  );
+  // !focus(1:6)
+  const planTurn = await runCodex('coordinator', {
+    role: 'planner',
+    prompt: plannerPrompt,
+    sandboxMode: 'read-only',
+    outputSchema: delegationPlanJsonSchema,
+  });
 }
 ```
 
@@ -117,29 +107,28 @@ the same three results.
 ```ts !before src/baseline/orchestrator.ts · original
 // !focus(1:5)
 const [sourceTurn, testTurn, initialTests] = await Promise.all([
-  this.runInvestigation(
-    input, sourceAssignment, 'source-investigator', emit,
-  ),
-  this.runInvestigation(
-    input, testAssignment, 'test-investigator', emit,
-  ),
-  this.runInitialTests(input.workspace, emit),
+  investigate(assignmentFor(plan, 'source')),
+  investigate(assignmentFor(plan, 'tests')),
+  this.runTests(input.workspace),
 ]);
 ```
 
 ```ts !after src/temporal/workflows.ts · with Temporal
 // !focus(1:9)
-const sourcePromise = executeChild(SubagentWorkflow, {
-  workflowId: `${input.runId}-source-investigator`,
-  args: [{ ...input, assignment: source }],
-});
-const testPromise = executeChild(SubagentWorkflow, {
-  workflowId: `${input.runId}-test-investigator`,
-  args: [{ ...input, assignment: tests }],
-});
-const initialTestsPromise = activities.runTests({
-  workspace: input.workspace, phase: 'initial',
-});
+const investigate = async (assignment: SubagentAssignment) => {
+  const nodeId = investigatorFor[assignment.focus];
+  return executeChild(SubagentWorkflow, {
+    workflowId: childWorkflowId(input.runId, nodeId),
+    args: [{ ...input, assignment }],
+    parentClosePolicy: ParentClosePolicy.REQUEST_CANCEL,
+  });
+};
+
+const [sourceResult, testResult, initialTests] = await Promise.all([
+  investigate(assignmentFor(plan, 'source')),
+  investigate(assignmentFor(plan, 'tests')),
+  activities.runTests({ workspace: input.workspace, phase: 'initial' }),
+]);
 ```
 
 ## !!steps Put external work in Activities
@@ -150,26 +139,20 @@ Codex and the test runner perform external work. Activities give that work a
 timeout, retry policy, and cancellation signal.
 
 ```ts !before src/baseline/orchestrator.ts · original
-private async runInvestigation(
-  input: BaselineRunInput,
-  assignment: SubagentAssignment,
-  nodeId: Extract<RunNode['id'],
-    'source-investigator' | 'test-investigator'>,
-  emit: (event: RunEvent) => RunSnapshot,
-) {
-  // !focus(1:8)
-  const result = await this.codex.run({
+const investigate = async (assignment: SubagentAssignment) => {
+  const nodeId = investigatorFor[assignment.focus];
+  // !focus(1:5)
+  const result = await runCodex(nodeId, {
     role: nodeId,
     prompt: investigationPrompt(assignment.prompt),
-    workspace: input.workspace,
     sandboxMode: 'read-only',
   });
   return result;
-}
+};
 ```
 
 ```ts !after src/temporal/workflows.ts · with Temporal
-const activities = proxyActivities<ReturnType<typeof createActivities>>({
+const activities = proxyActivities<Activities>({
   // !focus(1:3)
   startToCloseTimeout: '10 minutes',
   heartbeatTimeout: '20 seconds',
@@ -181,12 +164,9 @@ const activities = proxyActivities<ReturnType<typeof createActivities>>({
 });
 
 export async function SubagentWorkflow(input: SubagentWorkflowInput) {
-  // !focus(1:7)
-  const role = input.assignment.focus === 'source'
-    ? 'source-investigator'
-    : 'test-investigator';
+  // !focus(1:5)
   const codex = await activities.runCodexTurn({
-    role,
+    role: investigatorFor[input.assignment.focus],
     prompt: investigationPrompt(input.assignment.prompt),
     workspace: input.workspace,
   });
@@ -214,33 +194,26 @@ The Activity heartbeats its Codex thread ID and recent progress. A retry reads
 those details before it starts work.
 
 ```ts !before src/baseline/orchestrator.ts · original
-const result = await this.codex.run(
-  request,
-  {
-    // !focus(1:2)
-    onCheckpoint: ({ threadId }) =>
-      emit({ type: 'node', id: nodeId, status: 'running', threadId }),
-    onProgress: progressReporter(nodeId, emit),
-  },
-);
+this.codex.run({ ...request, workspace: input.workspace }, {
+  // !focus(1:2)
+  onThread: (threadId) =>
+    emit({ type: 'node', id: nodeId, status: 'running', threadId }),
+  onProgress: (progress) => emit(traceEvent(nodeId, progress)),
+});
 ```
 
 ```ts !after src/temporal/activities.ts · with Temporal
 const context = Context.current();
 // !focus(1:2)
-const checkpoint = asCodexHeartbeat(context.info.heartbeatDetails);
+const checkpoint = context.info.heartbeatDetails as CodexHeartbeat | undefined;
 const durableThreadId = checkpoint?.threadId ?? input.threadId;
 
-return executeCodex(
-  runner,
-  { ...input, threadId: durableThreadId },
-  replacementThread,
-);
+return runCodex(context, runner, { ...input, threadId: durableThreadId });
 
-// Inside executeCodex:
+// Inside runCodex:
 // !focus(1:4)
-onCheckpoint: ({ threadId, lastItemId }) => {
-  heartbeat = { ...heartbeat, threadId, lastItemId };
+onThread: (threadId) => {
+  heartbeat = { ...heartbeat, threadId };
   context.heartbeat(heartbeat);
 },
 ```
@@ -254,13 +227,13 @@ replacement Worker, so it does not create a second Workflow.
 
 ```ts !before src/supervisor/fleet-supervisor.ts · original
 if (managed.mode === 'baseline') {
-  // !focus(1:5)
+  // !focus(1:4)
   managed.workspace = await createRunWorkspace(runId);
   managed.snapshot = createInitialSnapshot(
     runId, managed.mode, managed.runnerMode,
   );
-  this.spawnBaseline(managed);
 }
+this.spawnFleet(managed);
 ```
 
 ```ts !after src/supervisor/fleet-supervisor.ts · with Temporal
@@ -268,10 +241,11 @@ if (managed.mode === 'temporal') {
   // !focus(1:7)
   managed.snapshot = {
     ...managed.snapshot,
-    workersOnline: true,
-    frozen: false,
     error: undefined,
+    nodes: managed.snapshot.nodes.map((node) =>
+      node.status === 'interrupted' ? { ...node, status: 'running' } : node,
+    ),
   };
-  this.spawnTemporalWorker(managed);
 }
+this.spawnFleet(managed);
 ```

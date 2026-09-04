@@ -3,7 +3,7 @@ import { Terminal } from '@xterm/xterm';
 import { TerminalWindowIcon, XIcon } from '@phosphor-icons/react';
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 
-import type { RunNode, RunSnapshot, RunTraceEntry } from '../shared/run-snapshot.js';
+import { nodeLabels, type RunNode, type RunSnapshot, type RunTraceEntry } from '../shared/run-snapshot.js';
 import '@xterm/xterm/css/xterm.css';
 
 type AgentConsoleProps = {
@@ -159,7 +159,7 @@ function AgentTerminalPane({
   const renderedEntriesRef = useRef(new Map<string, string>());
   const initialBoundaryRenderedRef = useRef(false);
   const systemStateRef = useRef<TerminalSystemState>({});
-  const label = consoleLabel(node.id);
+  const label = nodeLabels[node.id];
   const accessibleTranscript = useMemo(
     () => [
       snapshot.workersOnline
@@ -261,7 +261,7 @@ function AgentTerminalPane({
     }
 
     for (const entry of entries) {
-      const signature = `${entry.status}:${entry.kind}:${entry.message}`;
+      const signature = `${entry.status}:${entry.type}:${entry.message}`;
       if (renderedEntriesRef.current.get(entry.id) === signature) continue;
       renderedEntriesRef.current.set(entry.id, signature);
       terminal.writeln(formatTraceEntry(entry));
@@ -313,20 +313,10 @@ function formatTraceEntry(entry: RunTraceEntry): string {
     ? ANSI.red
     : entry.status === 'complete'
       ? ANSI.green
-      : entry.kind === 'thread'
+      : entry.type === 'thread'
         ? ANSI.cyan
         : ANSI.violet;
-  const prefix = entry.kind === 'tool'
-    ? '$ TOOL'
-    : entry.kind === 'reasoning'
-      ? '· THINK'
-      : entry.kind === 'thread'
-        ? '◆ THREAD'
-        : entry.kind === 'error'
-          ? '! ERROR'
-          : entry.kind === 'status'
-            ? '● STATUS'
-            : '› AGENT';
+  const prefix = entry.type === 'item' ? '$ TOOL' : entry.type === 'thread' ? '◆ THREAD' : '› AGENT';
   return `${color}${prefix}${ANSI.reset} ${message}`;
 }
 
@@ -347,13 +337,6 @@ function statusWord(status: RunNode['status']): string {
   if (status === 'interrupted') return 'Interrupted';
   if (status === 'running') return 'Running';
   return 'Waiting';
-}
-
-function consoleLabel(id: RunNode['id']): string {
-  if (id === 'coordinator') return 'Coordinator';
-  if (id === 'source-investigator') return 'Source investigator';
-  if (id === 'test-investigator') return 'Test investigator';
-  return 'Test runner';
 }
 
 function shortThread(threadId: string): string {

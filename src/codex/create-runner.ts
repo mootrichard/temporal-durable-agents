@@ -5,8 +5,6 @@ import type { RunnerMode } from '../shared/run-snapshot.js';
 
 export function createCodexRunner(mode: RunnerMode): CodexRunner {
   return mode === 'live'
-    ? new LiveCodexRunner({ model: process.env.CODEX_MODEL })
-    : new FixtureCodexRunner({
-        delayMs: Number.parseInt(process.env.FIXTURE_DELAY_MS ?? '1500', 10),
-      });
+    ? new LiveCodexRunner(process.env.CODEX_MODEL)
+    : new FixtureCodexRunner(Number.parseInt(process.env.FIXTURE_DELAY_MS ?? '1500', 10));
 }

@@ -1,9 +1,16 @@
 import type { CodexProgressEvent, CodexRole, CodexSandboxMode } from '../codex/types.js';
-import type { SubagentAssignment } from '../shared/delegation-plan.js';
+import type { InvestigatorId, SubagentAssignment } from '../shared/delegation-plan.js';
 import type { RunnerMode, RunSnapshot } from '../shared/run-snapshot.js';
+
+export const investigators: readonly InvestigatorId[] = ['source-investigator', 'test-investigator'];
 
 export function temporalTaskQueue(runId: string): string {
   return `durable-agent-tree-${runId}`;
+}
+
+/** Child Workflow ID for one investigator; the parent Workflow ID is the run ID itself. */
+export function childWorkflowId(runId: string, investigator: InvestigatorId): string {
+  return `${runId}-${investigator}`;
 }
 
 export type FixWorkflowInput = {
@@ -25,26 +32,19 @@ export type CodexActivityInput = {
 export type CodexActivityResult = {
   threadId: string;
   finalResponse: string;
-  resumed: boolean;
-  replacementThread: boolean;
   activityAttempt: number;
   trace: CodexProgressEvent[];
   usage: { inputTokens: number; outputTokens: number };
 };
 
+/** Heartbeat details for `runCodexTurn`; a retry resumes `threadId`, the supervisor projects `progress`. */
 export type CodexHeartbeat = {
+  role: CodexRole;
   threadId?: string;
-  lastItemId?: string;
-  role?: CodexRole;
   progress?: CodexProgressEvent;
 };
 
-export type SubagentWorkflowInput = {
-  runId: string;
-  runnerMode: RunnerMode;
-  workspace: string;
-  assignment: SubagentAssignment;
-};
+export type SubagentWorkflowInput = FixWorkflowInput & { assignment: SubagentAssignment };
 
 export type SubagentWorkflowResult = {
   assignment: SubagentAssignment;
@@ -53,6 +53,7 @@ export type SubagentWorkflowResult = {
 
 export type TestActivityInput = {
   workspace: string;
+  /** Recorded in Event History so the two test runs are distinguishable when reading the Workflow. */
   phase: 'initial' | 'final';
 };
 
@@ -63,6 +64,12 @@ export type TestActivityResult = {
   output: string;
   completedFiles: string[];
   activityAttempt: number;
+};
+
+export type Activities = {
+  runCodexTurn(input: CodexActivityInput): Promise<CodexActivityResult>;
+  runTests(input: TestActivityInput): Promise<TestActivityResult>;
+  getDiff(workspace: string): Promise<string>;
 };
 
 export type TemporalWorkflowResult = RunSnapshot;

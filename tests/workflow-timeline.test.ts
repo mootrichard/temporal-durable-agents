@@ -70,7 +70,6 @@ describe('projectWorkflowTimeline', () => {
     const timeline = projectWorkflowTimeline('run-1', root, [{
       history: child,
       laneId: 'source-investigator',
-      label: 'Source investigation',
       workflowId: 'run-1-source-investigator',
     }], new Date(base + 2_100));
 

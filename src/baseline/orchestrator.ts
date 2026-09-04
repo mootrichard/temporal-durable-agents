@@ -1,27 +1,26 @@
-import type { CodexProgressEvent, CodexRunResult, CodexRunner } from '../codex/types.js';
+import type { CodexRunRequest, CodexRunResult, CodexRunner } from '../codex/types.js';
 import {
   implementationPrompt,
   investigationPrompt,
   plannerPrompt,
 } from '../codex/prompts.js';
 import {
+  assignmentFor,
   delegationPlanJsonSchema,
+  investigatorFor,
   parseDelegationPlan,
   type SubagentAssignment,
 } from '../shared/delegation-plan.js';
 import {
   applyRunEvent,
   createInitialSnapshot,
+  traceEvent,
+  type NodeId,
   type RunEvent,
-  type RunNode,
   type RunnerMode,
   type RunSnapshot,
 } from '../shared/run-snapshot.js';
-import {
-  runFixtureTests,
-  type DemoTestResult,
-  type TestPhase,
-} from '../runtime/test-executor.js';
+import { runFixtureTests, type DemoTestResult } from '../runtime/test-executor.js';
 import { getWorkspaceDiff } from '../runtime/workspace.js';
 
 export type BaselineRunInput = {
@@ -30,19 +29,20 @@ export type BaselineRunInput = {
   workspace: string;
 };
 
-export type BaselineDependencies = {
-  codex: CodexRunner;
-  runTests?: (workspace: string, phase: TestPhase) => Promise<DemoTestResult>;
-};
+export type RunTests = (workspace: string) => Promise<DemoTestResult>;
 
+/** The baseline process publishes every snapshot as one stdout line under this prefix. */
+export const snapshotLinePrefix = 'DEMO_SNAPSHOT ';
+
+/**
+ * The process-owned coordinator. It mirrors FixWorkflow step for step, but every piece of
+ * state below lives only in this process's memory.
+ */
 export class BaselineOrchestrator {
-  private readonly codex: CodexRunner;
-  private readonly runTests: NonNullable<BaselineDependencies['runTests']>;
-
-  constructor(dependencies: BaselineDependencies) {
-    this.codex = dependencies.codex;
-    this.runTests = dependencies.runTests ?? runFixtureTests;
-  }
+  constructor(
+    private readonly codex: CodexRunner,
+    private readonly runTests: RunTests = (workspace) => runFixtureTests(workspace),
+  ) {}
 
   async run(
     input: BaselineRunInput,
@@ -56,40 +56,62 @@ export class BaselineOrchestrator {
     };
     onSnapshot(structuredClone(snapshot));
 
+    const runCodex = (nodeId: NodeId, request: Omit<CodexRunRequest, 'workspace'>): Promise<CodexRunResult> =>
+      this.codex.run({ ...request, workspace: input.workspace }, {
+        onThread: (threadId) => emit({ type: 'node', id: nodeId, status: 'running', threadId }),
+        onProgress: (progress) => {
+          emit({ type: 'node', id: nodeId, status: 'running', detail: progress.message });
+          emit(traceEvent(nodeId, progress));
+        },
+      }).then((result) => {
+        emit({ type: 'codex-complete', ...result.usage });
+        return result;
+      });
+
+    const investigate = async (assignment: SubagentAssignment): Promise<CodexRunResult> => {
+      const nodeId = investigatorFor[assignment.focus];
+      emit({ type: 'node', id: nodeId, status: 'running', detail: assignment.title, attempt: 1 });
+      const result = await runCodex(nodeId, {
+        role: nodeId,
+        prompt: investigationPrompt(assignment.prompt),
+        sandboxMode: 'read-only',
+      });
+      emit({ type: 'node', id: nodeId, status: 'complete', detail: result.finalResponse });
+      return result;
+    };
+
     try {
       emit({ type: 'phase', phase: 'planning' });
       emit({ type: 'node', id: 'coordinator', status: 'running', attempt: 1 });
-      const planTurn = await this.codex.run(
-        {
-          role: 'planner',
-          prompt: plannerPrompt,
-          workspace: input.workspace,
-          sandboxMode: 'read-only',
-          outputSchema: delegationPlanJsonSchema,
-        },
-        {
-          onCheckpoint: ({ threadId }) =>
-            emit({ type: 'node', id: 'coordinator', status: 'running', threadId }),
-          onProgress: progressReporter('coordinator', emit),
-        },
-      );
-      recordCodexCompletion(emit, planTurn);
+      const planTurn = await runCodex('coordinator', {
+        role: 'planner',
+        prompt: plannerPrompt,
+        sandboxMode: 'read-only',
+        outputSchema: delegationPlanJsonSchema,
+      });
       const plan = parseDelegationPlan(JSON.parse(planTurn.finalResponse));
 
       emit({ type: 'phase', phase: 'investigating' });
-      const sourceAssignment = assignmentFor(plan.assignments, 'source');
-      const testAssignment = assignmentFor(plan.assignments, 'tests');
-
       emit({
         type: 'node',
         id: 'coordinator',
         status: 'waiting',
         detail: 'Delegation plan ready. Waiting for investigations and reproduction.',
       });
+      emit({ type: 'node', id: 'test-job', status: 'running', detail: 'Reproducing the bug', attempt: 1 });
       const [sourceTurn, testTurn, initialTests] = await Promise.all([
-        this.runInvestigation(input, sourceAssignment, 'source-investigator', emit),
-        this.runInvestigation(input, testAssignment, 'test-investigator', emit),
-        this.runInitialTests(input.workspace, emit),
+        investigate(assignmentFor(plan, 'source')),
+        investigate(assignmentFor(plan, 'tests')),
+        this.runTests(input.workspace).then((result) => {
+          emit({ type: 'test-progress', completed: result.completed, total: result.total });
+          emit({
+            type: 'node',
+            id: 'test-job',
+            status: 'complete',
+            detail: result.passed ? 'Unexpectedly passed' : 'Bug reproduced',
+          });
+          return result;
+        }),
       ]);
 
       emit({ type: 'phase', phase: 'implementing' });
@@ -100,34 +122,20 @@ export class BaselineOrchestrator {
         detail: 'Applying the minimal fix from both investigations',
         attempt: 1,
       });
-      const implementation = await this.codex.run(
-        {
-          role: 'implementer',
-          prompt: implementationPrompt(
-            plan,
-            { source: sourceTurn.finalResponse, tests: testTurn.finalResponse },
-            initialTests.output,
-          ),
-          workspace: input.workspace,
-          sandboxMode: 'workspace-write',
-          threadId: planTurn.threadId,
-        },
-        {
-          onCheckpoint: ({ threadId }) =>
-            emit({
-              type: 'node',
-              id: 'coordinator',
-              status: 'running',
-              threadId,
-            }),
-          onProgress: progressReporter('coordinator', emit),
-        },
-      );
-      recordCodexCompletion(emit, implementation);
+      const implementation = await runCodex('coordinator', {
+        role: 'implementer',
+        prompt: implementationPrompt(
+          plan,
+          { source: sourceTurn.finalResponse, tests: testTurn.finalResponse },
+          initialTests.output,
+        ),
+        sandboxMode: 'workspace-write',
+        threadId: planTurn.threadId,
+      });
 
       emit({ type: 'phase', phase: 'testing' });
       emit({ type: 'node', id: 'test-job', status: 'running', detail: 'Final verification' });
-      const finalTests = await this.runTests(input.workspace, 'final');
+      const finalTests = await this.runTests(input.workspace);
       emit({ type: 'test-progress', completed: finalTests.completed, total: finalTests.total });
       if (!finalTests.passed) {
         throw new Error(`The final fixture tests failed:\n${finalTests.output}`);
@@ -141,91 +149,7 @@ export class BaselineOrchestrator {
         diff,
       });
     } catch (error) {
-      return emit({ type: 'failed', error: errorMessage(error) });
+      return emit({ type: 'failed', error: error instanceof Error ? error.message : String(error) });
     }
   }
-
-  private async runInvestigation(
-    input: BaselineRunInput,
-    assignment: SubagentAssignment,
-    nodeId: Extract<RunNode['id'], 'source-investigator' | 'test-investigator'>,
-    emit: (event: RunEvent) => RunSnapshot,
-  ): Promise<CodexRunResult> {
-    emit({ type: 'node', id: nodeId, status: 'running', detail: assignment.title, attempt: 1 });
-    const result = await this.codex.run(
-      {
-        role: nodeId,
-        prompt: investigationPrompt(assignment.prompt),
-        workspace: input.workspace,
-        sandboxMode: 'read-only',
-      },
-      {
-        onCheckpoint: ({ threadId }) =>
-          emit({ type: 'node', id: nodeId, status: 'running', threadId }),
-        onProgress: progressReporter(nodeId, emit),
-      },
-    );
-    recordCodexCompletion(emit, result);
-    emit({ type: 'node', id: nodeId, status: 'complete', detail: result.finalResponse });
-    return result;
-  }
-
-  private async runInitialTests(
-    workspace: string,
-    emit: (event: RunEvent) => RunSnapshot,
-  ): Promise<DemoTestResult> {
-    emit({ type: 'node', id: 'test-job', status: 'running', detail: 'Reproducing the bug', attempt: 1 });
-    const result = await this.runTests(workspace, 'initial');
-    emit({ type: 'test-progress', completed: result.completed, total: result.total });
-    emit({
-      type: 'node',
-      id: 'test-job',
-      status: 'complete',
-      detail: result.passed ? 'Unexpectedly passed' : 'Bug reproduced',
-    });
-    return result;
-  }
-}
-
-function progressReporter(
-  nodeId: RunNode['id'],
-  emit: (event: RunEvent) => RunSnapshot,
-): (progress: CodexProgressEvent) => void {
-  return (progress) => {
-    emit({ type: 'node', id: nodeId, status: 'running', detail: progress.message });
-    emit({
-      type: 'trace',
-      entry: {
-        id: `${nodeId}-${progress.id}`,
-        nodeId,
-        kind: progress.type === 'item' ? 'tool' : progress.type,
-        status: progress.status,
-        message: progress.message,
-      },
-    });
-  };
-}
-
-function assignmentFor(
-  assignments: SubagentAssignment[],
-  focus: SubagentAssignment['focus'],
-): SubagentAssignment {
-  const assignment = assignments.find((candidate) => candidate.focus === focus);
-  if (!assignment) throw new Error(`The delegation plan omitted the ${focus} investigation`);
-  return assignment;
-}
-
-function recordCodexCompletion(
-  emit: (event: RunEvent) => RunSnapshot,
-  result: CodexRunResult,
-): void {
-  emit({
-    type: 'codex-complete',
-    inputTokens: result.usage.inputTokens,
-    outputTokens: result.usage.outputTokens,
-  });
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

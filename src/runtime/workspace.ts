@@ -1,14 +1,9 @@
 import { execFile } from 'node:child_process';
-import { cp, mkdir, readFile, rm } from 'node:fs/promises';
+import { cp, mkdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
-
-export type WorkspaceOptions = {
-  baseDirectory?: string;
-  fixtureDirectory?: string;
-};
 
 export function getDemoRoot(): string {
   return process.env.DEMO_ROOT ?? process.cwd();
@@ -16,7 +11,7 @@ export function getDemoRoot(): string {
 
 export async function createRunWorkspace(
   runId: string,
-  options: WorkspaceOptions = {},
+  options: { baseDirectory?: string; fixtureDirectory?: string } = {},
 ): Promise<string> {
   if (!/^[a-zA-Z0-9-]+$/.test(runId)) {
     throw new Error('Run IDs may contain only letters, numbers, and hyphens');
@@ -26,7 +21,6 @@ export async function createRunWorkspace(
   const baseDirectory = options.baseDirectory ?? path.join(root, '.demo-runs');
   const fixtureDirectory = options.fixtureDirectory ?? path.join(root, 'fixture');
   const workspace = path.join(baseDirectory, runId, 'workspace');
-  await mkdir(baseDirectory, { recursive: true });
   await rm(path.dirname(workspace), { recursive: true, force: true });
   await mkdir(workspace, { recursive: true });
   await cp(fixtureDirectory, workspace, {
@@ -52,10 +46,6 @@ export async function getWorkspaceDiff(workspace: string): Promise<string> {
     maxBuffer: 1024 * 1024,
   });
   return stdout;
-}
-
-export async function readWorkspaceFile(workspace: string, filename: string): Promise<string> {
-  return readFile(path.join(workspace, filename), 'utf8');
 }
 
 export const fixtureTestFiles = [

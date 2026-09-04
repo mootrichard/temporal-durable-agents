@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import path from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 import { promisify } from 'node:util';
 
 import {
@@ -10,17 +11,13 @@ import { fixtureTestFiles, getDemoRoot } from './workspace.js';
 
 const execFileAsync = promisify(execFile);
 
-export type TestPhase = 'initial' | 'final';
-
 export type DemoTestResult = {
   passed: boolean;
   completed: number;
   total: number;
   output: string;
-  completedFiles?: string[];
+  completedFiles: string[];
 };
-
-export type TestProgress = (completedFiles: string[]) => void;
 
 export async function executeFixtureTestFile(
   workspace: string,
@@ -50,29 +47,27 @@ export async function executeFixtureTestFile(
 
 export async function runFixtureTests(
   workspace: string,
-  _phase: TestPhase,
   previouslyCompleted: string[] = [],
-  onProgress: TestProgress = () => undefined,
+  onProgress: (completedFiles: string[]) => void = () => undefined,
 ): Promise<DemoTestResult> {
+  const delayMs = Number.parseInt(process.env.TEST_FILE_DELAY_MS ?? '0', 10);
   const result = await runCheckpointedTests(
     [...fixtureTestFiles],
     previouslyCompleted,
     async (filename) => {
-      const delayMs = Number.parseInt(process.env.TEST_FILE_DELAY_MS ?? '0', 10);
-      if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
+      if (delayMs > 0) await delay(delayMs);
       return executeFixtureTestFile(workspace, filename);
     },
     onProgress,
-  );
-  const outputs = Object.entries(result.results).map(
-    ([filename, testResult]) => `${filename}\n${testResult.output}`,
   );
 
   return {
     passed: result.passed,
     completed: result.completed.length,
     total: fixtureTestFiles.length,
-    output: outputs.join('\n\n'),
+    output: Object.entries(result.results)
+      .map(([filename, testResult]) => `${filename}\n${testResult.output}`)
+      .join('\n\n'),
     completedFiles: result.completed,
   };
 }

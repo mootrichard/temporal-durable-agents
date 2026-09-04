@@ -423,15 +423,14 @@ Activity Execution.
 ### Codex recovery
 
 Every Codex Activity heartbeats its thread ID when the SDK emits
-`thread.started`. It updates the heartbeat after completed items and progress
-events, and its five-second lease repeats the current payload while the turn is
-quiet.
+`thread.started`. It updates the heartbeat after each progress event, and its
+five-second lease repeats the current payload while the turn is quiet.
 
 On retry, the Activity reads the heartbeated thread ID and calls
 `resumeThread`. The code submits the durable assignment again in a new turn with
 the earlier conversation available. It doesn't resume an interrupted token
-stream or continue after the exact last item. The heartbeat records
-`lastItemId`, but the recovery path uses the thread ID.
+stream or continue after the exact last item; the thread ID is the only
+recovery key.
 
 If the local session is missing or unavailable, the Activity starts a
 replacement thread with the same durable prompt and current Git workspace. The

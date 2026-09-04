@@ -13,28 +13,33 @@ import {
   plannerPrompt,
 } from '../codex/prompts.js';
 import {
+  assignmentFor,
   delegationPlanJsonSchema,
+  investigatorFor,
   parseDelegationPlan,
   type SubagentAssignment,
 } from '../shared/delegation-plan.js';
 import {
   applyRunEvent,
   createInitialSnapshot,
+  traceEvent,
+  type NodeId,
   type RunEvent,
-  type RunNode,
   type RunSnapshot,
 } from '../shared/run-snapshot.js';
-import type { createActivities } from './activities.js';
-import type {
-  FixWorkflowInput,
-  SubagentWorkflowInput,
-  SubagentWorkflowResult,
-  TemporalWorkflowResult,
+import {
+  childWorkflowId,
+  type Activities,
+  type CodexActivityResult,
+  type FixWorkflowInput,
+  type SubagentWorkflowInput,
+  type SubagentWorkflowResult,
+  type TemporalWorkflowResult,
 } from './contracts.js';
 
 const maximumActivityAttempts = 5;
 
-const activities = proxyActivities<ReturnType<typeof createActivities>>({
+const activities = proxyActivities<Activities>({
   startToCloseTimeout: '10 minutes',
   heartbeatTimeout: '20 seconds',
   retry: {
@@ -53,6 +58,26 @@ export async function FixWorkflow(input: FixWorkflowInput): Promise<TemporalWork
     return snapshot;
   };
   setHandler(snapshotQuery, () => snapshot);
+
+  const investigate = async (assignment: SubagentAssignment): Promise<SubagentWorkflowResult> => {
+    const nodeId = investigatorFor[assignment.focus];
+    emit({ type: 'node', id: nodeId, status: 'running', detail: assignment.title, attempt: 1 });
+    const result = await executeChild(SubagentWorkflow, {
+      workflowId: childWorkflowId(input.runId, nodeId),
+      args: [{ ...input, assignment }],
+      parentClosePolicy: ParentClosePolicy.REQUEST_CANCEL,
+    });
+    emit({
+      type: 'node',
+      id: nodeId,
+      status: 'complete',
+      detail: result.codex.finalResponse,
+      threadId: result.codex.threadId,
+      attempt: result.codex.activityAttempt,
+    });
+    recordCodex(emit, result.codex, nodeId);
+    return result;
+  };
 
   try {
     emit({ type: 'phase', phase: 'planning' });
@@ -74,8 +99,6 @@ export async function FixWorkflow(input: FixWorkflowInput): Promise<TemporalWork
       attempt: planTurn.activityAttempt,
     });
     const plan = parseDelegationPlan(JSON.parse(planTurn.finalResponse));
-    const source = assignmentFor(plan.assignments, 'source');
-    const tests = assignmentFor(plan.assignments, 'tests');
 
     emit({ type: 'phase', phase: 'investigating' });
     emit({
@@ -84,39 +107,15 @@ export async function FixWorkflow(input: FixWorkflowInput): Promise<TemporalWork
       status: 'waiting',
       detail: 'Delegation plan ready. Waiting for investigations and reproduction.',
     });
-    markInvestigationStarted(emit, source);
-    markInvestigationStarted(emit, tests);
     emit({ type: 'node', id: 'test-job', status: 'running', detail: 'Reproducing the bug', attempt: 1 });
-
-    const sourcePromise = executeChild(SubagentWorkflow, {
-      workflowId: `${input.runId}-source-investigator`,
-      args: [{ ...input, assignment: source }],
-      parentClosePolicy: ParentClosePolicy.REQUEST_CANCEL,
-    }).then((result) => {
-      completeInvestigation(emit, result);
-      recordCodex(emit, result.codex, nodeFor(result.assignment));
-      return result;
-    });
-    const testPromise = executeChild(SubagentWorkflow, {
-      workflowId: `${input.runId}-test-investigator`,
-      args: [{ ...input, assignment: tests }],
-      parentClosePolicy: ParentClosePolicy.REQUEST_CANCEL,
-    }).then((result) => {
-      completeInvestigation(emit, result);
-      recordCodex(emit, result.codex, nodeFor(result.assignment));
-      return result;
-    });
-    const initialTestsPromise = activities.runTests({ workspace: input.workspace, phase: 'initial' })
-      .then((result) => {
+    const [sourceResult, testResult, initialTests] = await Promise.all([
+      investigate(assignmentFor(plan, 'source')),
+      investigate(assignmentFor(plan, 'tests')),
+      activities.runTests({ workspace: input.workspace, phase: 'initial' }).then((result) => {
         emit({ type: 'test-progress', completed: result.completed, total: result.total });
         emit({ type: 'node', id: 'test-job', status: 'complete', detail: 'Bug reproduced' });
         return result;
-      });
-
-    const [sourceResult, testResult, initialTests] = await Promise.all([
-      sourcePromise,
-      testPromise,
-      initialTestsPromise,
+      }),
     ]);
 
     emit({ type: 'phase', phase: 'implementing' });
@@ -169,9 +168,8 @@ export async function FixWorkflow(input: FixWorkflowInput): Promise<TemporalWork
 export async function SubagentWorkflow(
   input: SubagentWorkflowInput,
 ): Promise<SubagentWorkflowResult> {
-  const role = input.assignment.focus === 'source' ? 'source-investigator' : 'test-investigator';
   const codex = await activities.runCodexTurn({
-    role,
+    role: investigatorFor[input.assignment.focus],
     prompt: investigationPrompt(input.assignment.prompt),
     workspace: input.workspace,
     sandboxMode: 'read-only',
@@ -180,80 +178,29 @@ export async function SubagentWorkflow(
   return { assignment: input.assignment, codex };
 }
 
-function nodeFor(assignment: SubagentAssignment): Extract<
-  RunNode['id'],
-  'source-investigator' | 'test-investigator'
-> {
-  return assignment.focus === 'source' ? 'source-investigator' : 'test-investigator';
-}
-
-function markInvestigationStarted(
-  emit: (event: RunEvent) => RunSnapshot,
-  assignment: SubagentAssignment,
-): void {
-  emit({ type: 'node', id: nodeFor(assignment), status: 'running', detail: assignment.title, attempt: 1 });
-}
-
-function completeInvestigation(
-  emit: (event: RunEvent) => RunSnapshot,
-  result: SubagentWorkflowResult,
-): void {
-  emit({
-    type: 'node',
-    id: nodeFor(result.assignment),
-    status: 'complete',
-    detail: result.codex.finalResponse,
-    threadId: result.codex.threadId,
-    attempt: result.codex.activityAttempt,
-  });
-}
-
-function assignmentFor(
-  assignments: SubagentAssignment[],
-  focus: SubagentAssignment['focus'],
-): SubagentAssignment {
-  const assignment = assignments.find((candidate) => candidate.focus === focus);
-  if (!assignment) throw new Error(`The delegation plan omitted the ${focus} investigation`);
-  return assignment;
-}
-
 function recordCodex(
   emit: (event: RunEvent) => RunSnapshot,
-  result: import('./contracts.js').CodexActivityResult,
-  nodeId: RunNode['id'],
+  result: CodexActivityResult,
+  nodeId: NodeId,
 ): void {
-  for (const progress of result.trace) {
-    emit({
-      type: 'trace',
-      entry: {
-        id: `${nodeId}-${progress.id}`,
-        nodeId,
-        kind: progress.type === 'item' ? 'tool' : progress.type,
-        status: progress.status,
-        message: progress.message,
-      },
-    });
-  }
+  for (const progress of result.trace) emit(traceEvent(nodeId, progress));
   for (let retry = 1; retry < result.activityAttempt; retry += 1) emit({ type: 'codex-retry' });
   emit({ type: 'codex-complete', ...result.usage });
 }
 
+/** A Codex Activity that exhausted its retry policy never returns, so its retries are counted here. */
 function recordExhaustedCodexRetries(
   emit: (event: RunEvent) => RunSnapshot,
   error: unknown,
 ): void {
-  let cause = error;
-  while (cause instanceof Error) {
+  for (let cause = error; cause instanceof Error; cause = cause.cause) {
     if (
       cause instanceof ActivityFailure
       && cause.activityType === 'runCodexTurn'
       && cause.retryState === RetryState.MAXIMUM_ATTEMPTS_REACHED
     ) {
-      for (let retry = 1; retry < maximumActivityAttempts; retry += 1) {
-        emit({ type: 'codex-retry' });
-      }
+      for (let retry = 1; retry < maximumActivityAttempts; retry += 1) emit({ type: 'codex-retry' });
       return;
     }
-    cause = cause.cause;
   }
 }

@@ -7,23 +7,20 @@ import {
 } from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import type { RunSnapshot } from '../shared/run-snapshot.js';
-import type {
-  TimelineLaneId,
-  TimelineSpan,
-  WorkflowTimeline as WorkflowTimelineData,
-} from '../shared/workflow-timeline.js';
+import { nodeLabels, type NodeId, type RunSnapshot } from '../shared/run-snapshot.js';
+import type { TimelineSpan, WorkflowTimeline as WorkflowTimelineData } from '../shared/workflow-timeline.js';
+import { api, errorMessage } from './api.js';
 
 type WorkflowTimelineProps = {
   onClose: () => void;
   snapshot: RunSnapshot;
 };
 
-const LANES: Array<{ id: TimelineLaneId; label: string; detail: string }> = [
-  { id: 'coordinator', label: 'Coordinator', detail: 'Parent Workflow' },
-  { id: 'source-investigator', label: 'Source investigator', detail: 'Child Workflow' },
-  { id: 'test-investigator', label: 'Test investigator', detail: 'Child Workflow' },
-  { id: 'test-job', label: 'Test runner', detail: 'Activity' },
+const LANES: Array<{ id: NodeId; detail: string }> = [
+  { id: 'coordinator', detail: 'Parent Workflow' },
+  { id: 'source-investigator', detail: 'Child Workflow' },
+  { id: 'test-investigator', detail: 'Child Workflow' },
+  { id: 'test-job', detail: 'Activity' },
 ];
 
 const ZOOM_LEVELS = [1, 1.75, 3] as const;
@@ -49,15 +46,13 @@ export function WorkflowTimeline({ onClose, snapshot }: WorkflowTimelineProps) {
     let active = true;
     const refresh = async () => {
       try {
-        const response = await fetch(`/api/runs/${encodeURIComponent(snapshot.runId)}/timeline`);
-        const body = await response.json() as WorkflowTimelineData | { error?: string };
-        if (!response.ok) throw new Error('error' in body && body.error ? body.error : `Request failed (${response.status})`);
+        const body = await api<WorkflowTimelineData>(`/api/runs/${encodeURIComponent(snapshot.runId)}/timeline`);
         if (active) {
-          setTimeline(body as WorkflowTimelineData);
+          setTimeline(body);
           setError(undefined);
         }
       } catch (caught) {
-        if (active) setError(caught instanceof Error ? caught.message : String(caught));
+        if (active) setError(errorMessage(caught));
       }
     };
     void refresh();
@@ -221,7 +216,7 @@ function TimelineChart({
           return (
             <div className="timeline-lane" key={lane.id}>
               <div className="timeline-lane-label">
-                <strong>{lane.label}</strong>
+                <strong>{nodeLabels[lane.id]}</strong>
                 <span>{lane.detail}</span>
               </div>
               <div

@@ -19,29 +19,27 @@ import {
 } from '@phosphor-icons/react';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 
+import type { Preflight } from '../runtime/preflight.js';
 import {
   createInitialSnapshot,
+  isRunFinished,
+  nodeLabels,
   type DemoMode,
+  type NodeId,
   type NodeStatus,
   type RunnerMode,
   type RunNode,
   type RunPhase,
   type RunSnapshot,
 } from '../shared/run-snapshot.js';
-import {
-  deriveRunControlState,
-  isCodexLoginReady,
-} from './run-control-state.js';
+import { api, errorMessage } from './api.js';
+import { actionLabels, deriveRunControlState, type RunControlState } from './run-control-state.js';
+import { useReturnFocus } from './use-return-focus.js';
 
 const AgentConsole = lazy(() => import('./AgentConsole.js'));
 const WorkflowTimeline = lazy(() => import('./WorkflowTimeline.js'));
 
 type Snapshots = Partial<Record<DemoMode, RunSnapshot>>;
-type Preflight = {
-  codexLogin: string;
-  temporalAddress: string;
-  temporalReachable: boolean;
-};
 
 type StoredRunSession = {
   mode: DemoMode;
@@ -50,6 +48,7 @@ type StoredRunSession = {
 };
 
 const storedRunSessionKey = 'durable-agent-tree-session';
+const modes: DemoMode[] = ['baseline', 'temporal'];
 
 const PHASES = [
   { label: 'Plan', phase: 'planning' },
@@ -57,6 +56,43 @@ const PHASES = [
   { label: 'Implement', phase: 'implementing' },
   { label: 'Verify', phase: 'testing' },
 ] as const;
+
+const phaseTitles: Record<RunPhase, string> = {
+  idle: 'Ready to start',
+  planning: 'Planning',
+  investigating: 'Investigating',
+  implementing: 'Implementing',
+  testing: 'Verifying',
+  complete: 'Run complete',
+  failed: 'Run failed',
+  interrupted: 'Workers stopped',
+};
+
+const coordinatorSummaries: Record<RunPhase, string> = {
+  idle: 'Ready to inspect the frozen fixture.',
+  planning: 'Creating the delegation plan.',
+  investigating: 'Dispatching investigations and consolidating results.',
+  implementing: 'Applying the smallest verified fix.',
+  testing: 'Coordinating final verification.',
+  complete: 'Results consolidated and execution complete.',
+  failed: 'Execution stopped on a failed step.',
+  interrupted: 'Waiting for workers to restart.',
+};
+
+const statusLabels: Record<NodeStatus, string> = {
+  waiting: 'Waiting',
+  running: 'In progress',
+  complete: 'Completed',
+  failed: 'Failed',
+  interrupted: 'Interrupted',
+};
+
+const waitingCopy: Record<NodeId, string> = {
+  coordinator: 'Ready to inspect the frozen fixture.',
+  'source-investigator': 'Queued until the coordinator returns the delegation plan.',
+  'test-investigator': 'Queued until the coordinator returns the delegation plan.',
+  'test-job': 'Queued with the investigations after planning.',
+};
 
 export function App() {
   const [initialSession] = useState(loadStoredRunSession);
@@ -69,7 +105,7 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [requestError, setRequestError] = useState<string>();
   const [preflight, setPreflight] = useState<Preflight>();
-  const [selectedNodeId, setSelectedNodeId] = useState<RunNode['id']>('test-investigator');
+  const [selectedNodeId, setSelectedNodeId] = useState<NodeId>('test-investigator');
   const [historyOpen, setHistoryOpen] = useState(false);
   const [confirmKill, setConfirmKill] = useState(false);
   const [consoleOpen, setConsoleOpen] = useState(false);
@@ -77,17 +113,14 @@ export function App() {
   const actionInFlight = useRef(false);
   const fleetActionRef = useRef<HTMLButtonElement>(null);
   const keepRunningRef = useRef<HTMLButtonElement>(null);
-  const restoreFleetFocus = useRef(false);
   const consoleLaunchRef = useRef<HTMLButtonElement>(null);
-  const restoreConsoleFocus = useRef(false);
   const timelineLaunchRef = useRef<HTMLButtonElement>(null);
-  const restoreTimelineFocus = useRef(false);
   const snapshot = snapshots[mode] ?? createInitialSnapshot('preview', mode, runnerMode);
-  const { action, actionLabel, runActive, showRunnerChoice } = deriveRunControlState(snapshot);
+  const { action, runActive, showRunnerChoice } = deriveRunControlState(snapshot);
   const selectedNode = snapshot.nodes.find(({ id }) => id === selectedNodeId) ?? snapshot.nodes[0]!;
 
   useEffect(() => {
-    const storedRuns = (['baseline', 'temporal'] as const).flatMap((storedMode) => {
+    const storedRuns = modes.flatMap((storedMode) => {
       const runId = initialSession.runIds[storedMode];
       return runId ? [{ mode: storedMode, runId }] : [];
     });
@@ -144,8 +177,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!snapshot.runId || snapshot.runId === 'preview' || snapshot.frozen) return;
-    if (snapshot.phase === 'complete' || snapshot.phase === 'failed') return;
+    if (snapshot.runId === 'preview' || snapshot.frozen || isRunFinished(snapshot)) return;
     const timer = window.setInterval(async () => {
       try {
         const current = await api<RunSnapshot>(`/api/runs/${snapshot.runId}`);
@@ -166,43 +198,11 @@ export function App() {
     return () => window.removeEventListener('keydown', closeOnEscape);
   }, [confirmKill]);
 
-  useEffect(() => {
-    if (consoleOpen) {
-      restoreConsoleFocus.current = true;
-      return;
-    }
-    if (restoreConsoleFocus.current) {
-      restoreConsoleFocus.current = false;
-      consoleLaunchRef.current?.focus();
-    }
-  }, [consoleOpen]);
+  useReturnFocus(consoleOpen, consoleLaunchRef);
+  useReturnFocus(timelineOpen, timelineLaunchRef);
+  useReturnFocus(confirmKill, fleetActionRef, keepRunningRef);
 
-  useEffect(() => {
-    if (timelineOpen) {
-      restoreTimelineFocus.current = true;
-      return;
-    }
-    if (restoreTimelineFocus.current) {
-      restoreTimelineFocus.current = false;
-      timelineLaunchRef.current?.focus();
-    }
-  }, [timelineOpen]);
-
-  useEffect(() => {
-    if (confirmKill) {
-      restoreFleetFocus.current = true;
-      const frame = window.requestAnimationFrame(() => keepRunningRef.current?.focus());
-      return () => window.cancelAnimationFrame(frame);
-    }
-    if (restoreFleetFocus.current) {
-      restoreFleetFocus.current = false;
-      fleetActionRef.current?.focus();
-    }
-  }, [confirmKill]);
-
-  const codexReady = preflight === undefined
-    ? undefined
-    : isCodexLoginReady(preflight.codexLogin);
+  const codexReady = preflight?.codexReady;
   const runtimeReady = sessionReady
     && (mode !== 'temporal' || preflight?.temporalReachable !== false)
     && (runnerMode !== 'live' || codexReady !== false);
@@ -348,7 +348,7 @@ export function App() {
                         : 'Workers stopped'}
                 </strong>
                 <small>
-                  {(snapshot.phase === 'failed' || snapshot.phase === 'complete') && snapshot.workersOnline
+                  {isRunFinished(snapshot) && snapshot.workersOnline
                     ? 'Workers still online'
                     : runnerMode === 'live'
                       ? 'Live Codex'
@@ -365,8 +365,8 @@ export function App() {
             onClick={() => void handleFleetAction()}
             type="button"
           >
-            <ActionIcon actionLabel={actionLabel} />
-            {busy ? 'Working…' : actionLabel}
+            <ActionIcon action={action} />
+            {busy ? 'Working…' : actionLabels[action]}
           </button>
           {snapshot.runId !== 'preview' && (
             <button
@@ -408,10 +408,10 @@ export function App() {
         <section className="status-overview" aria-labelledby="phase-heading">
           <div className="status-copy">
             <span className="sr-only" data-testid="run-phase">{snapshot.phase}</span>
-            <h1 id="phase-heading">{phaseTitle(snapshot.phase)}</h1>
+            <h1 id="phase-heading">{phaseTitles[snapshot.phase]}</h1>
             <p>{phaseSummary(snapshot)}</p>
           </div>
-          <PhaseTrack phase={snapshot.phase} snapshot={snapshot} />
+          <PhaseTrack snapshot={snapshot} />
         </section>
 
         {snapshot.frozen && (
@@ -427,14 +427,14 @@ export function App() {
         <section className="execution-stage" data-testid="execution-tree">
           <div className="tree-column">
             <CoordinatorNode
-              node={snapshot.nodes.find(({ id }) => id === 'coordinator')!}
+              node={snapshot.nodes[0]!}
               onSelect={() => setSelectedNodeId('coordinator')}
               selected={selectedNodeId === 'coordinator'}
-              summary={coordinatorSummary(snapshot.phase)}
+              summary={coordinatorSummaries[snapshot.phase]}
             />
             <div className="tree-connector" aria-hidden="true" />
             <div className="worker-stack">
-              {snapshot.nodes.filter(({ id }) => id !== 'coordinator').map((node) => (
+              {snapshot.nodes.slice(1).map((node) => (
                 <WorkerNode
                   key={node.id}
                   node={node}
@@ -503,18 +503,18 @@ export function App() {
   );
 }
 
-function ActionIcon({ actionLabel }: { actionLabel: string }) {
-  if (actionLabel === 'Kill workers') return <StopIcon aria-hidden="true" weight="fill" />;
-  if (actionLabel === 'Restart workers') return <ArrowClockwiseIcon aria-hidden="true" weight="bold" />;
+function ActionIcon({ action }: { action: RunControlState['action'] }) {
+  if (action === 'kill') return <StopIcon aria-hidden="true" weight="fill" />;
+  if (action === 'restart') return <ArrowClockwiseIcon aria-hidden="true" weight="bold" />;
   return <PlayIcon aria-hidden="true" weight="fill" />;
 }
 
-function PhaseTrack({ phase, snapshot }: { phase: RunPhase; snapshot: RunSnapshot }) {
-  const activeIndex = phaseIndex(phase, snapshot);
+function PhaseTrack({ snapshot }: { snapshot: RunSnapshot }) {
+  const activeIndex = phaseIndex(snapshot);
   return (
     <ol className="phase-track" aria-label="Run phases">
       {PHASES.map((item, index) => (
-        <li className={phase === 'complete' || index < activeIndex ? 'complete' : index === activeIndex ? 'current' : ''} key={item.phase}>
+        <li className={snapshot.phase === 'complete' || index < activeIndex ? 'complete' : index === activeIndex ? 'current' : ''} key={item.phase}>
           <span>{item.label}</span>
         </li>
       ))}
@@ -539,7 +539,7 @@ function CoordinatorNode({
         <span className="coordinator-label"><i />Coordinator</span>
         <strong>{summary}</strong>
         {node.threadId && <code>thread:{shortThread(node.threadId)}</code>}
-        <span className="node-status-text">{statusLabel(node.status)}</span>
+        <span className="node-status-text">{statusLabels[node.status]}</span>
       </button>
     </article>
   );
@@ -558,18 +558,18 @@ function WorkerNode({
 }) {
   const progress = snapshot.metrics.totalTests === 0
     ? 0
-    : (snapshot.metrics.completedTests / snapshot.metrics.totalTests) * 100;
+    : snapshot.metrics.completedTests / snapshot.metrics.totalTests;
 
   return (
     <article className={`worker-node status-${node.status} ${selected ? 'selected' : ''}`} data-testid={`node-${node.id}`}>
       <button aria-expanded={selected} className="worker-summary" onClick={onSelect} type="button">
         <span className="worker-icon" aria-hidden="true"><NodeIcon nodeId={node.id} status={node.status} /></span>
         <span className="worker-identity">
-          <strong>{workerRole(node.id)}</strong>
-          <span>{node.detail ?? waitingCopy(node.id)}</span>
+          <strong>{nodeLabels[node.id]}</strong>
+          <span>{node.detail ?? waitingCopy[node.id]}</span>
         </span>
         <span className="worker-state">
-          <strong>{statusLabel(node.status)}</strong>
+          <strong>{statusLabels[node.status]}</strong>
           <span>{statusDetail(node)}</span>
         </span>
         {selected ? <CaretUpIcon aria-hidden="true" /> : <CaretDownIcon aria-hidden="true" />}
@@ -579,14 +579,20 @@ function WorkerNode({
         <div className="worker-expanded">
           <div className="activity-card">
             <span>Latest activity</span>
-            <strong>{node.detail ?? waitingCopy(node.id)}</strong>
+            <strong>{node.detail ?? waitingCopy[node.id]}</strong>
             <small>Attempt {node.attempt || '—'}</small>
           </div>
           <div className="checkpoint-card">
             <span>Test checkpoint</span>
             <strong data-testid="test-progress">{snapshot.metrics.completedTests} / {snapshot.metrics.totalTests}</strong>
-            <div className="progress-track" aria-hidden="true"><i style={{ transform: `scaleX(${progress / 100})` }} /></div>
-            <small>{checkpointCopy(snapshot)}</small>
+            <div className="progress-track" aria-hidden="true"><i style={{ transform: `scaleX(${progress})` }} /></div>
+            <small>
+              {snapshot.phase === 'complete'
+                ? 'All tests passed.'
+                : snapshot.mode === 'temporal'
+                  ? 'Progress is saved with the run.'
+                  : 'Progress lives inside this process.'}
+            </small>
           </div>
         </div>
       )}
@@ -621,7 +627,7 @@ function NodeInspector({
   }
 
   return (
-    <aside className="node-inspector" aria-label={`${workerRole(node.id)} details`} data-testid="node-inspector">
+    <aside className="node-inspector" aria-label={`${nodeLabels[node.id]} details`} data-testid="node-inspector">
       <div className="inspector-field">
         <span>Thread ID</span>
         <div className="thread-value">
@@ -670,7 +676,7 @@ function NodeInspector({
         <ol className="execution-trace" data-testid="execution-trace" aria-live="polite">
           {snapshot.trace.length > 0 ? snapshot.trace.map((entry) => (
             <li className={`trace-${entry.status}`} key={entry.id}>
-              <span>{traceNodeLabel(entry.nodeId)}</span>
+              <span>{nodeLabels[entry.nodeId]}</span>
               <strong>{entry.message}</strong>
             </li>
           )) : (
@@ -682,7 +688,7 @@ function NodeInspector({
   );
 }
 
-function NodeIcon({ nodeId, status }: { nodeId: RunNode['id']; status: NodeStatus }) {
+function NodeIcon({ nodeId, status }: { nodeId: NodeId; status: NodeStatus }) {
   if (status === 'complete') return <CheckCircleIcon weight="fill" />;
   if (status === 'running') return <CircleNotchIcon className="spinning" weight="bold" />;
   if (status === 'failed' || status === 'interrupted') return <XCircleIcon weight="fill" />;
@@ -692,64 +698,49 @@ function NodeIcon({ nodeId, status }: { nodeId: RunNode['id']; status: NodeStatu
   return <MinusCircleIcon />;
 }
 
-function phaseTitle(phase: RunPhase): string {
-  if (phase === 'idle') return 'Ready to start';
-  if (phase === 'planning') return 'Planning';
-  if (phase === 'investigating') return 'Investigating';
-  if (phase === 'implementing') return 'Implementing';
-  if (phase === 'testing') return 'Verifying';
-  if (phase === 'complete') return 'Run complete';
-  if (phase === 'failed') return 'Run failed';
-  return 'Workers stopped';
-}
-
 function phaseSummary(snapshot: RunSnapshot): string {
-  const leaves = snapshot.nodes.filter(({ id }) => id !== 'coordinator');
-  const completed = leaves.filter(({ status }) => status === 'complete').length;
-  if (snapshot.phase === 'idle') return 'Choose a runtime, then start the reliability demo.';
-  if (snapshot.phase === 'planning') return 'The coordinator is creating the delegation plan.';
-  if (snapshot.phase === 'investigating') {
-    return `The coordinator started two investigations and one test job. ${completed} of 3 branches ${completed === 1 ? 'has' : 'have'} completed.`;
+  switch (snapshot.phase) {
+    case 'idle':
+      return 'Choose a runtime, then start the reliability demo.';
+    case 'planning':
+      return 'The coordinator is creating the delegation plan.';
+    case 'investigating': {
+      const completed = snapshot.nodes.filter(({ id, status }) => id !== 'coordinator' && status === 'complete').length;
+      return `The coordinator started two investigations and one test job. ${completed} of 3 branches ${completed === 1 ? 'has' : 'have'} completed.`;
+    }
+    case 'implementing':
+      return 'The investigations agree. The coordinator is applying the fix.';
+    case 'testing':
+      return `The fix is in place. Tests are ${snapshot.metrics.completedTests} of ${snapshot.metrics.totalTests}.`;
+    case 'complete':
+      return snapshot.summary ?? 'The fix is verified and the run is complete.';
+    case 'failed':
+      return snapshot.error ?? 'The run stopped because a step failed.';
+    case 'interrupted':
+      return snapshot.mode === 'temporal'
+        ? 'Event History kept the run. Restart the workers to continue.'
+        : 'Process memory was lost. Restarting begins a new run.';
   }
-  if (snapshot.phase === 'implementing') return 'The investigations agree. The coordinator is applying the fix.';
-  if (snapshot.phase === 'testing') return `The fix is in place. Tests are ${snapshot.metrics.completedTests} of ${snapshot.metrics.totalTests}.`;
-  if (snapshot.phase === 'complete') return snapshot.summary ?? 'The fix is verified and the run is complete.';
-  if (snapshot.phase === 'failed') return snapshot.error ?? 'The run stopped because a step failed.';
-  return snapshot.mode === 'temporal'
-    ? 'Event History kept the run. Restart the workers to continue.'
-    : 'Process memory was lost. Restarting begins a new run.';
 }
 
-function coordinatorSummary(phase: RunPhase): string {
-  if (phase === 'idle') return 'Ready to inspect the frozen fixture.';
-  if (phase === 'planning') return 'Creating the delegation plan.';
-  if (phase === 'investigating') return 'Dispatching investigations and consolidating results.';
-  if (phase === 'implementing') return 'Applying the smallest verified fix.';
-  if (phase === 'testing') return 'Coordinating final verification.';
-  if (phase === 'complete') return 'Results consolidated and execution complete.';
-  if (phase === 'failed') return 'Execution stopped on a failed step.';
-  return 'Waiting for workers to restart.';
-}
-
-function phaseIndex(phase: RunPhase, snapshot: RunSnapshot): number {
-  if (phase === 'planning') return 0;
-  if (phase === 'investigating') return 1;
-  if (phase === 'implementing') return 2;
-  if (phase === 'testing' || phase === 'complete') return 3;
-  if (phase === 'interrupted') {
-    if (snapshot.metrics.completedTests > 0) return 3;
-    if (snapshot.nodes.some(({ id, status }) => id !== 'coordinator' && status === 'complete')) return 1;
-    return 0;
+function phaseIndex(snapshot: RunSnapshot): number {
+  switch (snapshot.phase) {
+    case 'planning':
+      return 0;
+    case 'investigating':
+      return 1;
+    case 'implementing':
+      return 2;
+    case 'testing':
+    case 'complete':
+      return 3;
+    case 'interrupted':
+      if (snapshot.metrics.completedTests > 0) return 3;
+      if (snapshot.nodes.some(({ id, status }) => id !== 'coordinator' && status === 'complete')) return 1;
+      return 0;
+    default:
+      return -1;
   }
-  return -1;
-}
-
-function statusLabel(status: NodeStatus): string {
-  if (status === 'complete') return 'Completed';
-  if (status === 'running') return 'In progress';
-  if (status === 'interrupted') return 'Interrupted';
-  if (status === 'failed') return 'Failed';
-  return 'Waiting';
 }
 
 function statusDetail(node: RunNode): string {
@@ -760,103 +751,42 @@ function statusDetail(node: RunNode): string {
   return 'Queued for this phase.';
 }
 
-function checkpointCopy(snapshot: RunSnapshot): string {
-  if (snapshot.phase === 'complete') return 'All tests passed.';
-  if (snapshot.mode === 'temporal') return 'Progress is saved with the run.';
-  return 'Progress lives inside this process.';
-}
-
-function workerRole(id: RunNode['id']): string {
-  if (id === 'coordinator') return 'Coordinator';
-  if (id === 'source-investigator') return 'Source investigator';
-  if (id === 'test-investigator') return 'Test investigator';
-  return 'Test runner';
-}
-
-function waitingCopy(id: RunNode['id']): string {
-  if (id === 'coordinator') return 'Ready to inspect the frozen fixture.';
-  if (id === 'test-job') return 'Queued with the investigations after planning.';
-  return 'Queued until the coordinator returns the delegation plan.';
-}
-
 function shortThread(threadId: string): string {
   return threadId.length > 18 ? threadId.slice(0, 18) : threadId;
 }
 
-function traceNodeLabel(nodeId: RunSnapshot['trace'][number]['nodeId']): string {
-  if (nodeId === 'source-investigator') return 'Source';
-  if (nodeId === 'test-investigator') return 'Tests';
-  if (nodeId === 'test-job') return 'Test runner';
-  if (nodeId === 'system') return 'System';
-  return 'Coordinator';
-}
-
-async function api<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
-    headers: { 'content-type': 'application/json' },
-    ...options,
-  });
-  const body = await response.json() as T & { error?: string };
-  if (!response.ok) throw new Error(body.error ?? `Request failed with ${response.status}`);
-  return body;
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 function loadStoredRunSession(): StoredRunSession {
-  const fallback: StoredRunSession = {
-    mode: 'baseline',
-    runnerMode: 'fixture',
-    runIds: {},
-  };
-  if (typeof window === 'undefined') return fallback;
-
+  const fallback: StoredRunSession = { mode: 'baseline', runnerMode: 'fixture', runIds: {} };
   try {
-    const parsed = JSON.parse(window.localStorage.getItem(storedRunSessionKey) ?? 'null');
-    if (typeof parsed !== 'object' || parsed === null) return fallback;
-    const candidate = parsed as {
+    const candidate = JSON.parse(window.localStorage.getItem(storedRunSessionKey) ?? 'null') as {
       mode?: unknown;
       runnerMode?: unknown;
-      runIds?: { baseline?: unknown; temporal?: unknown };
-    };
+      runIds?: Partial<Record<DemoMode, unknown>>;
+    } | null;
+    if (!candidate) return fallback;
+    const runIds: StoredRunSession['runIds'] = {};
+    for (const storedMode of modes) {
+      const runId = candidate.runIds?.[storedMode];
+      if (typeof runId === 'string') runIds[storedMode] = runId;
+    }
     return {
       mode: candidate.mode === 'temporal' ? 'temporal' : 'baseline',
       runnerMode: candidate.runnerMode === 'live' ? 'live' : 'fixture',
-      runIds: {
-        ...(typeof candidate.runIds?.baseline === 'string'
-          ? { baseline: candidate.runIds.baseline }
-          : {}),
-        ...(typeof candidate.runIds?.temporal === 'string'
-          ? { temporal: candidate.runIds.temporal }
-          : {}),
-      },
+      runIds,
     };
   } catch {
     return fallback;
   }
 }
 
-function saveStoredRunSession(
-  mode: DemoMode,
-  runnerMode: RunnerMode,
-  snapshots: Snapshots,
-): void {
-  const session: StoredRunSession = {
-    mode,
-    runnerMode,
-    runIds: {
-      ...(snapshots.baseline?.runId && snapshots.baseline.runId !== 'preview'
-        ? { baseline: snapshots.baseline.runId }
-        : {}),
-      ...(snapshots.temporal?.runId && snapshots.temporal.runId !== 'preview'
-        ? { temporal: snapshots.temporal.runId }
-        : {}),
-    },
-  };
+function saveStoredRunSession(mode: DemoMode, runnerMode: RunnerMode, snapshots: Snapshots): void {
+  const runIds: StoredRunSession['runIds'] = {};
+  for (const storedMode of modes) {
+    const runId = snapshots[storedMode]?.runId;
+    if (runId && runId !== 'preview') runIds[storedMode] = runId;
+  }
   try {
-    window.localStorage.setItem(storedRunSessionKey, JSON.stringify(session));
+    window.localStorage.setItem(storedRunSessionKey, JSON.stringify({ mode, runnerMode, runIds }));
   } catch {
     // Browser persistence is best-effort; the active in-memory run remains usable.
   }

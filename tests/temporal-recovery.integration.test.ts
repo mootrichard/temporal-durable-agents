@@ -9,10 +9,11 @@ import { afterAll, beforeAll, expect, it } from 'vitest';
 
 import { FixtureCodexRunner } from '../src/codex/fixture-runner.js';
 import type { CodexRole, CodexRunner } from '../src/codex/types.js';
-import { executeFixtureTestFile, runFixtureTests } from '../src/runtime/test-executor.js';
-import { createRunWorkspace, fixtureTestFiles, getWorkspaceDiff } from '../src/runtime/workspace.js';
+import { executeFixtureTestFile } from '../src/runtime/test-executor.js';
+import { createRunWorkspace, fixtureTestFiles } from '../src/runtime/workspace.js';
+import type { RunSnapshot } from '../src/shared/run-snapshot.js';
 import { createActivities } from '../src/temporal/activities.js';
-import type { CodexActivityInput, CodexActivityResult } from '../src/temporal/contracts.js';
+import type { Activities, CodexActivityResult, TestActivityInput } from '../src/temporal/contracts.js';
 import { FixWorkflow } from '../src/temporal/workflows.js';
 
 let environment: TestWorkflowEnvironment;
@@ -47,10 +48,7 @@ it('reuses a completed child and retries only interrupted work on a replacement 
     async run(input, hooks = {}) {
       calls[input.role] += 1;
       if (input.role === 'test-investigator' && !input.threadId) {
-        hooks.onCheckpoint?.({
-          threadId: 'fixture-test-investigator',
-          threadTurnNumber: 1,
-        });
+        hooks.onThread?.('fixture-test-investigator');
         interruptedStarted();
         await Context.current().cancelled;
         throw new Error('The cancelled Activity unexpectedly continued');
@@ -58,14 +56,12 @@ it('reuses a completed child and retries only interrupted work on a replacement 
       if (input.role === 'test-investigator' && input.threadId) {
         resumedThreadIds.push(input.threadId);
       }
-      const result = await new FixtureCodexRunner({ delayMs: 0 }).run(input, hooks);
+      const result = await new FixtureCodexRunner(0).run(input, hooks);
       if (input.role === 'source-investigator') sourceFinished();
       return result;
     },
   };
-  const supportActivities = activitySet(successfulCodex);
-  const durableCodexActivity = createActivities({ createRunner: () => recoveryRunner }).runCodexTurn;
-  const firstActivities = { ...supportActivities, runCodexTurn: durableCodexActivity };
+  const firstActivities = activitySet({ runCodexTurn: createActivities(() => recoveryRunner).runCodexTurn });
 
   const workerOne = await Worker.create({
     connection: environment.nativeConnection,
@@ -98,7 +94,7 @@ it('reuses a completed child and retries only interrupted work on a replacement 
     connection: environment.nativeConnection,
     taskQueue,
     workflowsPath: new URL('../src/temporal/workflows.ts', import.meta.url).pathname,
-    activities: { ...supportActivities, runCodexTurn: durableCodexActivity },
+    activities: firstActivities,
   });
 
   const result = await workerTwo.runUntil(handle.result());
@@ -118,7 +114,7 @@ it('restores heartbeated test filenames and skips them on a replacement Worker',
   let checkpointReady!: () => void;
   const checkpointed = new Promise<void>((resolve) => { checkpointReady = resolve; });
 
-  const interruptingTests = async (input: { workspace: string; phase: 'initial' | 'final' }) => {
+  const interruptingTests = async (input: TestActivityInput) => {
     const context = Context.current();
     if (input.phase === 'initial') {
       return {
@@ -161,7 +157,7 @@ it('restores heartbeated test filenames and skips them on a replacement Worker',
     connection: environment.nativeConnection,
     taskQueue,
     workflowsPath: new URL('../src/temporal/workflows.ts', import.meta.url).pathname,
-    activities: activitySet(successfulCodex, interruptingTests),
+    activities: activitySet({ runTests: interruptingTests }),
     shutdownGraceTime: '1 second',
     maxHeartbeatThrottleInterval: '100 milliseconds',
     defaultHeartbeatThrottleInterval: '100 milliseconds',
@@ -181,7 +177,7 @@ it('restores heartbeated test filenames and skips them on a replacement Worker',
     connection: environment.nativeConnection,
     taskQueue,
     workflowsPath: new URL('../src/temporal/workflows.ts', import.meta.url).pathname,
-    activities: activitySet(successfulCodex, interruptingTests),
+    activities: activitySet({ runTests: interruptingTests }),
     maxHeartbeatThrottleInterval: '100 milliseconds',
     defaultHeartbeatThrottleInterval: '100 milliseconds',
   });
@@ -206,7 +202,7 @@ it('reports retries when a Codex Activity exhausts its retry policy', async () =
     connection: environment.nativeConnection,
     taskQueue,
     workflowsPath: new URL('../src/temporal/workflows.ts', import.meta.url).pathname,
-    activities: activitySet(alwaysFailingCodex),
+    activities: activitySet({ runCodexTurn: alwaysFailingCodex }),
   });
   const handle = await environment.client.workflow.start(FixWorkflow, {
     workflowId: runId,
@@ -221,60 +217,17 @@ it('reports retries when a Codex Activity exhausts its retry policy', async () =
   expect(result.metrics.retriedCodexTurns).toBe(4);
 }, 30_000);
 
-function activitySet(
-  runCodexTurn: (input: CodexActivityInput) => Promise<CodexActivityResult>,
-  runTestsOverride?: (input: { workspace: string; phase: 'initial' | 'final' }) => Promise<{
-    passed: boolean;
-    completed: number;
-    total: number;
-    output: string;
-    completedFiles: string[];
-    activityAttempt: number;
-  }>,
-) {
-  return {
-    runCodexTurn,
-    runTests: runTestsOverride ?? (async (input: { workspace: string; phase: 'initial' | 'final' }) => {
-      const context = Context.current();
-      const previous = Array.isArray(context.info.heartbeatDetails)
-        ? context.info.heartbeatDetails as string[]
-        : [];
-      const result = await runFixtureTests(
-        input.workspace,
-        input.phase,
-        previous,
-        (completed) => context.heartbeat(completed),
-      );
-      return {
-        ...result,
-        completedFiles: result.completedFiles ?? [],
-        activityAttempt: context.info.attempt,
-      };
-    }),
-    getDiff: (workspace: string) => getWorkspaceDiff(workspace),
-  };
-}
-
-async function successfulCodex(input: CodexActivityInput): Promise<CodexActivityResult> {
-  const context = Context.current();
-  const runner = new FixtureCodexRunner({ delayMs: 0 });
-  const result = await runner.run(input, {
-    onCheckpoint: ({ threadId, lastItemId }) => context.heartbeat({ threadId, lastItemId }),
-  });
-  return {
-    ...result,
-    replacementThread: false,
-    activityAttempt: context.info.attempt,
-    trace: [],
-  };
+/** The fixture Activities with any overrides a scenario needs. */
+function activitySet(overrides: Partial<Activities>): Activities {
+  return { ...createActivities(() => new FixtureCodexRunner(0)), ...overrides };
 }
 
 async function waitForSnapshot(
   handle: { query<T>(query: string): Promise<T> },
-  predicate: (snapshot: import('../src/shared/run-snapshot.js').RunSnapshot) => boolean,
-): Promise<import('../src/shared/run-snapshot.js').RunSnapshot> {
+  predicate: (snapshot: RunSnapshot) => boolean,
+): Promise<RunSnapshot> {
   const deadline = Date.now() + 3_000;
-  let snapshot!: import('../src/shared/run-snapshot.js').RunSnapshot;
+  let snapshot!: RunSnapshot;
   while (Date.now() < deadline) {
     snapshot = await handle.query('snapshot');
     if (predicate(snapshot)) return snapshot;

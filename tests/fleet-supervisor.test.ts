@@ -2,50 +2,33 @@ import { rm } from 'node:fs/promises';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
+import { defaultPayloadConverter } from '@temporalio/common';
 import { expect, it } from 'vitest';
 
-import {
-  decodeCodexHeartbeat,
-  decodeHeartbeatStringArray,
-  ensureTemporalReachable,
-  FleetSupervisor,
-  shouldProjectTemporalProgress,
-  temporalProgressWorkflowIds,
-} from '../src/supervisor/fleet-supervisor.js';
-import { applyRunEvent, createInitialSnapshot } from '../src/shared/run-snapshot.js';
+import { ensureTemporalReachable } from '../src/runtime/preflight.js';
 import { getDemoRoot } from '../src/runtime/workspace.js';
+import { applyRunEvent, createInitialSnapshot } from '../src/shared/run-snapshot.js';
+import { FleetSupervisor, projectPendingActivity } from '../src/supervisor/fleet-supervisor.js';
+import type { CodexHeartbeat } from '../src/temporal/contracts.js';
 
-it('decodes Temporal default JSON heartbeat payloads for test checkpoints', () => {
-  const data = new TextEncoder().encode(
-    JSON.stringify(['tests/retry-success.test.ts', 'tests/retry-eventual-success.test.ts']),
-  );
-  expect(decodeHeartbeatStringArray({ payloads: [{ data }] })).toEqual([
-    'tests/retry-success.test.ts',
-    'tests/retry-eventual-success.test.ts',
-  ]);
+function pendingActivity(name: string, details: unknown, attempt = 1) {
+  return {
+    activityType: { name },
+    attempt,
+    heartbeatDetails: { payloads: [defaultPayloadConverter.toPayload(details)] },
+  };
+}
+
+it('projects a heartbeated test checkpoint onto the cached snapshot', () => {
+  const snapshot = createInitialSnapshot('temporal-run', 'temporal', 'fixture');
+  const files = ['tests/retry-success.test.ts', 'tests/retry-eventual-success.test.ts'];
+
+  expect(projectPendingActivity(snapshot, pendingActivity('runTests', files)).metrics.completedTests).toBe(2);
 });
 
-it('ignores heartbeat payloads that are not filename arrays', () => {
-  const data = new TextEncoder().encode(JSON.stringify({ threadId: 'codex-thread' }));
-  expect(decodeHeartbeatStringArray({ payloads: [{ data }] })).toBeUndefined();
-});
-
-it('fails fast with an actionable message when Temporal is offline', async () => {
-  await expect(ensureTemporalReachable('127.0.0.1:1', 50)).rejects.toThrow(
-    'Temporal is offline at 127.0.0.1:1. Start it with npm run temporal:up.',
-  );
-});
-
-it('inspects the parent and both Child Workflows for live progress', () => {
-  expect(temporalProgressWorkflowIds('temporal-run')).toEqual([
-    'temporal-run',
-    'temporal-run-source-investigator',
-    'temporal-run-test-investigator',
-  ]);
-});
-
-it('decodes a Child Workflow Codex heartbeat', () => {
-  const heartbeat = {
+it('projects a Child Workflow Codex heartbeat as live node progress and a trace entry', () => {
+  const snapshot = createInitialSnapshot('temporal-run', 'temporal', 'fixture');
+  const heartbeat: CodexHeartbeat = {
     threadId: 'fixture-source-investigator',
     role: 'source-investigator',
     progress: {
@@ -55,17 +38,28 @@ it('decodes a Child Workflow Codex heartbeat', () => {
       message: 'source-investigator started',
     },
   };
-  const data = new TextEncoder().encode(JSON.stringify(heartbeat));
 
-  expect(decodeCodexHeartbeat({ payloads: [{ data }] })).toEqual(heartbeat);
+  const projected = projectPendingActivity(snapshot, pendingActivity('runCodexTurn', heartbeat, 2));
+
+  expect(projected.nodes.find(({ id }) => id === 'source-investigator')).toMatchObject({
+    status: 'running',
+    threadId: 'fixture-source-investigator',
+    detail: 'source-investigator started',
+    attempt: 2,
+  });
+  expect(projected.trace).toEqual([{ ...heartbeat.progress, nodeId: 'source-investigator' }]);
 });
 
-it('does not let pending Activity heartbeats overwrite a terminal run', () => {
-  const running = createInitialSnapshot('temporal-run', 'temporal', 'live');
-  const failed = applyRunEvent(running, { type: 'failed', error: 'Activity failed' });
+it('ignores pending activities without heartbeat details', () => {
+  const snapshot = createInitialSnapshot('temporal-run', 'temporal', 'fixture');
 
-  expect(shouldProjectTemporalProgress(running)).toBe(true);
-  expect(shouldProjectTemporalProgress(failed)).toBe(false);
+  expect(projectPendingActivity(snapshot, { activityType: { name: 'runCodexTurn' } })).toBe(snapshot);
+});
+
+it('fails fast with an actionable message when Temporal is offline', async () => {
+  await expect(ensureTemporalReachable('127.0.0.1:1', 50)).rejects.toThrow(
+    'Temporal is offline at 127.0.0.1:1. Start it with npm run temporal:up.',
+  );
 });
 
 it('marks a completed baseline fleet offline after its process exits', async () => {

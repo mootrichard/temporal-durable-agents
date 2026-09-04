@@ -7,6 +7,7 @@ import { afterEach, expect, it } from 'vitest';
 import { BaselineOrchestrator } from '../src/baseline/orchestrator.js';
 import { FixtureCodexRunner } from '../src/codex/fixture-runner.js';
 import { createRunWorkspace } from '../src/runtime/workspace.js';
+import type { RunSnapshot } from '../src/shared/run-snapshot.js';
 
 const temporaryDirectories: string[] = [];
 
@@ -23,14 +24,16 @@ it('implements the fixture fix through the baseline public run interface', async
   temporaryDirectories.push(baseDirectory);
   const workspace = await createRunWorkspace('baseline-run', { baseDirectory });
   const snapshots: string[] = [];
-  const orchestrator = new BaselineOrchestrator({
-    codex: new FixtureCodexRunner({ delayMs: 0 }),
-    runTests: async (_workspace, phase) => ({
-      passed: phase === 'final',
-      completed: phase === 'final' ? 4 : 2,
+  let testRuns = 0;
+  const orchestrator = new BaselineOrchestrator(new FixtureCodexRunner(0), async () => {
+    const final = testRuns++ > 0;
+    return {
+      passed: final,
+      completed: final ? 4 : 2,
       total: 4,
-      output: phase === 'final' ? '4 passed' : '1 failed, 2 passed',
-    }),
+      output: final ? '4 passed' : '1 failed, 2 passed',
+      completedFiles: [],
+    };
   });
 
   const result = await orchestrator.run(
@@ -48,10 +51,8 @@ it('publishes Codex progress while the planning turn is still running', async ()
   const baseDirectory = await mkdtemp(path.join(tmpdir(), 'baseline-agent-tree-'));
   temporaryDirectories.push(baseDirectory);
   const workspace = await createRunWorkspace('baseline-progress', { baseDirectory });
-  const snapshots: import('../src/shared/run-snapshot.js').RunSnapshot[] = [];
-  const orchestrator = new BaselineOrchestrator({
-    codex: new FixtureCodexRunner({ delayMs: 0 }),
-  });
+  const snapshots: RunSnapshot[] = [];
+  const orchestrator = new BaselineOrchestrator(new FixtureCodexRunner(0));
 
   await orchestrator.run(
     { runId: 'baseline-progress', runnerMode: 'fixture', workspace },

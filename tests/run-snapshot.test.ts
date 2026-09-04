@@ -4,16 +4,9 @@ import {
   applyRunEvent,
   createInitialSnapshot,
 } from '../src/shared/run-snapshot.js';
-import {
-  deriveRunControlState,
-  isCodexLoginReady,
-} from '../src/ui/run-control-state.js';
+import { deriveRunControlState } from '../src/ui/run-control-state.js';
 
 describe('run snapshot', () => {
-  it('enables Live Codex only for an authenticated CLI status', () => {
-    expect(isCodexLoginReady('Logged in using ChatGPT')).toBe(true);
-    expect(isCodexLoginReady('Not logged in')).toBe(false);
-  });
 
   it('starts with one coordinator, two subagents, and one test job', () => {
     const snapshot = createInitialSnapshot('run-1', 'temporal', 'fixture');
@@ -67,7 +60,7 @@ describe('run snapshot', () => {
       entry: {
         id: 'planner-tool-1',
         nodeId: 'coordinator',
-        kind: 'tool',
+        type: 'item',
         status: 'running',
         message: 'Running: rg --files',
       },
@@ -77,7 +70,7 @@ describe('run snapshot', () => {
       entry: {
         id: 'planner-tool-1',
         nodeId: 'coordinator',
-        kind: 'tool',
+        type: 'item',
         status: 'complete',
         message: 'Completed: rg --files',
       },
@@ -115,9 +108,8 @@ describe('run snapshot', () => {
       { type: 'failed', error: 'Child Workflow execution failed' },
     );
 
-    expect(deriveRunControlState(failed)).toMatchObject({
+    expect(deriveRunControlState(failed)).toEqual({
       action: 'kill',
-      actionLabel: 'Kill workers',
       runActive: true,
       showRunnerChoice: false,
     });
@@ -129,11 +121,9 @@ describe('run snapshot', () => {
       { type: 'complete', summary: 'Fixed and verified', diff: '+ fix' },
     );
 
-    expect(deriveRunControlState(completed)).toMatchObject({
+    expect(deriveRunControlState(completed)).toEqual({
       action: 'kill',
-      actionLabel: 'Kill workers',
       runActive: true,
-      runFinished: true,
       showRunnerChoice: false,
     });
   });

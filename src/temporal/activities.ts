@@ -5,6 +5,7 @@ import type { CodexRunner } from '../codex/types.js';
 import { runFixtureTests } from '../runtime/test-executor.js';
 import { getWorkspaceDiff } from '../runtime/workspace.js';
 import type {
+  Activities,
   CodexActivityInput,
   CodexActivityResult,
   CodexHeartbeat,
@@ -12,92 +13,76 @@ import type {
   TestActivityResult,
 } from './contracts.js';
 
-export type ActivityDependencies = {
-  createRunner?: typeof createCodexRunner;
-};
+const heartbeatLeaseMs = 5_000;
 
-export function createActivities(dependencies: ActivityDependencies = {}) {
-  const runnerFactory = dependencies.createRunner ?? createCodexRunner;
-
+export function createActivities(createRunner = createCodexRunner): Activities {
   return {
     async runCodexTurn(input: CodexActivityInput): Promise<CodexActivityResult> {
       const context = Context.current();
-      const checkpoint = asCodexHeartbeat(context.info.heartbeatDetails);
+      const checkpoint = context.info.heartbeatDetails as CodexHeartbeat | undefined;
       const durableThreadId = checkpoint?.threadId ?? input.threadId;
-      const runner = runnerFactory(input.runnerMode);
-      let replacementThread = false;
+      const runner = createRunner(input.runnerMode);
 
       try {
-        return await executeCodex(runner, { ...input, threadId: durableThreadId }, replacementThread);
+        return await runCodex(context, runner, { ...input, threadId: durableThreadId });
       } catch (error) {
         if (!durableThreadId || !isUnavailableLocalSession(error)) throw error;
-        replacementThread = true;
-        return executeCodex(runner, { ...input, threadId: undefined }, replacementThread);
-      }
-
-      async function executeCodex(
-        codex: CodexRunner,
-        request: CodexActivityInput,
-        replaced: boolean,
-      ): Promise<CodexActivityResult> {
-        let heartbeat: CodexHeartbeat = {
-          ...checkpoint,
-          ...(request.threadId ? { threadId: request.threadId } : {}),
-          role: request.role,
-        };
-        const trace: NonNullable<CodexActivityResult['trace']> = [];
-        const result = await withHeartbeatLease(
-          () => context.heartbeat(heartbeat),
-          () => codex.run(
-            { ...request, signal: context.cancellationSignal },
-            {
-              onCheckpoint: ({ threadId, lastItemId }) => {
-                heartbeat = { ...heartbeat, threadId, lastItemId };
-                context.heartbeat(heartbeat);
-              },
-              onProgress: (progress) => {
-                trace.push(progress);
-                heartbeat = { ...heartbeat, progress };
-                context.heartbeat(heartbeat);
-              },
-            },
-          ),
-        );
-        return {
-          ...result,
-          replacementThread: replaced,
-          activityAttempt: context.info.attempt,
-          trace: trace.slice(-24),
-        };
+        // The local Codex session is gone; the durable prompt and Git workspace start a replacement thread.
+        return runCodex(context, runner, { ...input, threadId: undefined });
       }
     },
 
     async runTests(input: TestActivityInput): Promise<TestActivityResult> {
       const context = Context.current();
-      const completed = asCompletedFiles(context.info.heartbeatDetails);
+      const completed = context.info.heartbeatDetails as string[] | undefined;
       const result = await runFixtureTests(
         input.workspace,
-        input.phase,
         completed,
         (completedFiles) => context.heartbeat(completedFiles),
       );
-      return {
-        ...result,
-        completedFiles: result.completedFiles ?? [],
-        activityAttempt: context.info.attempt,
-      };
+      return { ...result, activityAttempt: context.info.attempt };
     },
 
-    async getDiff(workspace: string): Promise<string> {
-      return getWorkspaceDiff(workspace);
-    },
+    getDiff: getWorkspaceDiff,
   };
 }
 
+async function runCodex(
+  context: Context,
+  runner: CodexRunner,
+  request: CodexActivityInput,
+): Promise<CodexActivityResult> {
+  let heartbeat: CodexHeartbeat = { role: request.role, threadId: request.threadId };
+  const trace: CodexActivityResult['trace'] = [];
+  const result = await withHeartbeatLease(
+    () => context.heartbeat(heartbeat),
+    () => runner.run(
+      { ...request, signal: context.cancellationSignal },
+      {
+        onThread: (threadId) => {
+          heartbeat = { ...heartbeat, threadId };
+          context.heartbeat(heartbeat);
+        },
+        onProgress: (progress) => {
+          trace.push(progress);
+          heartbeat = { ...heartbeat, progress };
+          context.heartbeat(heartbeat);
+        },
+      },
+    ),
+  );
+  return {
+    ...result,
+    activityAttempt: context.info.attempt,
+    trace: trace.slice(-24),
+  };
+}
+
+/** Repeats the latest heartbeat during quiet SDK periods so the attempt stays inside its heartbeat timeout. */
 export async function withHeartbeatLease<T>(
   heartbeat: () => void,
   task: () => Promise<T>,
-  intervalMs = 5_000,
+  intervalMs = heartbeatLeaseMs,
 ): Promise<T> {
   heartbeat();
   const timer = setInterval(heartbeat, intervalMs);
@@ -106,16 +91,6 @@ export async function withHeartbeatLease<T>(
   } finally {
     clearInterval(timer);
   }
-}
-
-function asCodexHeartbeat(value: unknown): CodexHeartbeat | undefined {
-  if (typeof value !== 'object' || value === null) return undefined;
-  if ('threadId' in value && value.threadId !== undefined && typeof value.threadId !== 'string') return undefined;
-  return value as CodexHeartbeat;
-}
-
-function asCompletedFiles(value: unknown): string[] {
-  return Array.isArray(value) && value.every((entry) => typeof entry === 'string') ? value : [];
 }
 
 function isUnavailableLocalSession(error: unknown): boolean {
