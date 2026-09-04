@@ -2,21 +2,20 @@
 
 This directory contains the HyperFrames slideshow for the durable agent-tree demo.
 
-The 29-slide main line now follows the implementation from `POST /api/runs`
-through Workflow start, Task Queue polling, Activity and Child Workflow fan-out,
-heartbeat projection, process-group failure, timeout and retry, Workflow replay,
-checkpoint restoration, final tests, and the Git diff. The replay slide opens a
-two-slide Event History microscope for deeper Q&A.
+The 20-slide deck contrasts a process-owned agent run with a Temporal-owned one:
+the shared bug and agent tree, the baseline plan, fan-out, resume, kill, and
+restart-from-zero, then the Temporal Workflow start, Child Workflow identities,
+heartbeat-driven resume, replay on a replacement Worker, and the same Git diff.
 
 ## Present
 
 From this directory:
 
 ```bash
-npm run present
+npm run present   # serves this directory on http://localhost:3004
 ```
 
-Click **Present**, or press **P**, to open the audience tab. Use the presenter tab for editable speaker notes and the audience tab for screen sharing.
+Click **Present** to open the audience tab. Use the presenter tab for editable speaker notes and the audience tab for screen sharing.
 
 - Google Meet: share the audience tab.
 - Zoom: drag the audience tab into its own window and share that window.

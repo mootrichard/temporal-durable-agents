@@ -6,25 +6,20 @@ The coordinator returns two bounded assignments. The application parses that
 plan before it starts each investigator.
 
 ```ts ! src/baseline/orchestrator.ts
-// !focus(1:10)
-const planTurn = await this.codex.run(
-  {
-    role: 'planner',
-    prompt: plannerPrompt,
-    workspace: input.workspace,
-    sandboxMode: 'read-only',
-    outputSchema: delegationPlanJsonSchema,
-  },
-  {
-    onCheckpoint: ({ threadId }) =>
-      emit({ type: 'node', id: 'coordinator', status: 'running', threadId }),
-    onProgress: progressReporter('coordinator', emit),
-  },
-);
+// !focus(1:6)
+const planTurn = await runCodex('coordinator', {
+  role: 'planner',
+  prompt: plannerPrompt,
+  sandboxMode: 'read-only',
+  outputSchema: delegationPlanJsonSchema,
+});
 
 const plan = parseDelegationPlan(JSON.parse(planTurn.finalResponse));
-const sourceAssignment = plan.assignments[0];
-const testAssignment = plan.assignments[1];
+const [sourceTurn, testTurn, initialTests] = await Promise.all([
+  investigate(assignmentFor(plan, 'source')),
+  investigate(assignmentFor(plan, 'tests')),
+  this.runTests(input.workspace),
+]);
 ```
 
 ```text !prompt src/codex/prompts.ts · coordinator planning prompt
@@ -46,11 +41,10 @@ is inserted at the top of the investigator prompt.
 
 ```ts ! src/baseline/orchestrator.ts
 // Called once for source and once for tests inside Promise.all.
-// !focus(2:8)
-const result = await this.codex.run({
+// !focus(1:5)
+const result = await runCodex(nodeId, {
   role: nodeId,
   prompt: investigationPrompt(assignment.prompt),
-  workspace: input.workspace,
   sandboxMode: 'read-only',
 });
 ```
@@ -88,10 +82,7 @@ for await (const event of streamed.events) {
   // !focus(1:4)
   if (event.type === 'thread.started') {
     threadId = event.thread_id;
-    hooks.onCheckpoint?.({
-      threadId,
-      threadTurnNumber: resumed ? 2 : 1,
-    });
+    hooks.onThread?.(threadId);
   }
 }
 ```
@@ -104,8 +95,8 @@ The application combines both reports with the failing tests. It resumes the
 coordinator thread to implement the fix.
 
 ```ts ! src/baseline/orchestrator.ts
-// !focus(1:9)
-const implementation = await this.codex.run({
+// !focus(1:13)
+const implementation = await runCodex('coordinator', {
   role: 'implementer',
   prompt: implementationPrompt(
     plan,
@@ -115,7 +106,6 @@ const implementation = await this.codex.run({
     },
     initialTests.output,
   ),
-  workspace: input.workspace,
   sandboxMode: 'workspace-write',
   threadId: planTurn.threadId,
 });
@@ -174,13 +164,13 @@ new initial snapshot.
 async restart(runId: string): Promise<RunSnapshot> {
   const managed = this.requireRun(runId);
 
-  // !focus(1:5)
+  // !focus(1:6)
   if (managed.mode === 'baseline') {
     managed.workspace = await createRunWorkspace(runId);
     managed.snapshot = createInitialSnapshot(
       runId, managed.mode, managed.runnerMode,
     );
-    this.spawnBaseline(managed);
   }
+  this.spawnFleet(managed);
 }
 ```

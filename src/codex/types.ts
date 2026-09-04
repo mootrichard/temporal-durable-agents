@@ -16,12 +16,6 @@ export type CodexRunRequest = {
   signal?: AbortSignal;
 };
 
-export type CodexCheckpoint = {
-  threadId: string;
-  threadTurnNumber: number;
-  lastItemId?: string;
-};
-
 export type CodexProgressEvent = {
   id: string;
   type: 'thread' | 'item' | 'message';
@@ -30,14 +24,14 @@ export type CodexProgressEvent = {
 };
 
 export type CodexRunHooks = {
-  onCheckpoint?: (checkpoint: CodexCheckpoint) => void;
+  /** Fires as soon as the thread ID is known, before the turn produces output. */
+  onThread?: (threadId: string) => void;
   onProgress?: (event: CodexProgressEvent) => void;
 };
 
 export type CodexRunResult = {
   threadId: string;
   finalResponse: string;
-  resumed: boolean;
   usage: {
     inputTokens: number;
     outputTokens: number;

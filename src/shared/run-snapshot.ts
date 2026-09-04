@@ -1,3 +1,5 @@
+import type { CodexProgressEvent } from '../codex/types.js';
+
 export type DemoMode = 'baseline' | 'temporal';
 export type RunnerMode = 'live' | 'fixture';
 export type RunPhase =
@@ -16,10 +18,17 @@ export type NodeStatus =
   | 'failed'
   | 'interrupted';
 
+export type NodeId = 'coordinator' | 'source-investigator' | 'test-investigator' | 'test-job';
+
+export const nodeLabels: Record<NodeId, string> = {
+  coordinator: 'Coordinator',
+  'source-investigator': 'Source investigator',
+  'test-investigator': 'Test investigator',
+  'test-job': 'Test runner',
+};
+
 export type RunNode = {
-  id: 'coordinator' | 'source-investigator' | 'test-investigator' | 'test-job';
-  label: string;
-  kind: 'coordinator' | 'subagent' | 'job';
+  id: NodeId;
   status: NodeStatus;
   detail?: string;
   threadId?: string;
@@ -35,13 +44,7 @@ export type RunMetrics = {
   outputTokens: number;
 };
 
-export type RunTraceEntry = {
-  id: string;
-  nodeId: RunNode['id'] | 'system';
-  kind: 'status' | 'thread' | 'reasoning' | 'tool' | 'message' | 'error';
-  status: 'running' | 'complete' | 'failed';
-  message: string;
-};
+export type RunTraceEntry = CodexProgressEvent & { nodeId: NodeId };
 
 export type RunSnapshot = {
   runId: string;
@@ -63,7 +66,7 @@ export type RunEvent =
   | { type: 'phase'; phase: RunPhase }
   | {
       type: 'node';
-      id: RunNode['id'];
+      id: NodeId;
       status: NodeStatus;
       detail?: string;
       threadId?: string;
@@ -78,6 +81,8 @@ export type RunEvent =
   | { type: 'failed'; error: string }
   | { type: 'interrupted'; error: string };
 
+const traceLimit = 24;
+
 export function createInitialSnapshot(
   runId: string,
   mode: DemoMode,
@@ -91,36 +96,7 @@ export function createInitialSnapshot(
     workersOnline: true,
     frozen: false,
     sequence: 0,
-    nodes: [
-      {
-        id: 'coordinator',
-        label: 'Main coding agent',
-        kind: 'coordinator',
-        status: 'waiting',
-        attempt: 0,
-      },
-      {
-        id: 'source-investigator',
-        label: 'Inspect implementation',
-        kind: 'subagent',
-        status: 'waiting',
-        attempt: 0,
-      },
-      {
-        id: 'test-investigator',
-        label: 'Inspect test contract',
-        kind: 'subagent',
-        status: 'waiting',
-        attempt: 0,
-      },
-      {
-        id: 'test-job',
-        label: 'Run test suite',
-        kind: 'job',
-        status: 'waiting',
-        attempt: 0,
-      },
-    ],
+    nodes: (Object.keys(nodeLabels) as NodeId[]).map((id) => ({ id, status: 'waiting', attempt: 0 })),
     trace: [],
     metrics: {
       completedCodexTurns: 0,
@@ -131,6 +107,14 @@ export function createInitialSnapshot(
       outputTokens: 0,
     },
   };
+}
+
+export function isRunFinished(snapshot: RunSnapshot): boolean {
+  return snapshot.phase === 'complete' || snapshot.phase === 'failed';
+}
+
+export function traceEvent(nodeId: NodeId, progress: CodexProgressEvent): RunEvent {
+  return { type: 'trace', entry: { ...progress, nodeId } };
 }
 
 export function applyRunEvent(snapshot: RunSnapshot, event: RunEvent): RunSnapshot {
@@ -174,8 +158,8 @@ export function applyRunEvent(snapshot: RunSnapshot, event: RunEvent): RunSnapsh
     case 'trace': {
       const existing = next.trace.findIndex(({ id }) => id === event.entry.id);
       next.trace = existing === -1
-        ? [...next.trace, event.entry].slice(-24)
-        : next.trace.map((entry, index) => index === existing ? event.entry : entry);
+        ? [...next.trace, event.entry].slice(-traceLimit)
+        : next.trace.with(existing, event.entry);
       break;
     }
     case 'complete':

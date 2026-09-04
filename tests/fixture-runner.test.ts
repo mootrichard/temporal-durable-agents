@@ -29,7 +29,7 @@ describe('FixtureCodexRunner', () => {
   });
 
   it('returns the same valid two-agent delegation plan on every run', async () => {
-    const runner = new FixtureCodexRunner({ delayMs: 0 });
+    const runner = new FixtureCodexRunner(0);
     const result = await runner.run({
       role: 'planner',
       prompt: 'Plan the fix.',
@@ -45,7 +45,7 @@ describe('FixtureCodexRunner', () => {
     const baseDirectory = await mkdtemp(path.join(tmpdir(), 'agent-tree-demo-'));
     temporaryDirectories.push(baseDirectory);
     const workspace = await createRunWorkspace('fixture-run', { baseDirectory });
-    const runner = new FixtureCodexRunner({ delayMs: 0 });
+    const runner = new FixtureCodexRunner(0);
 
     await runner.run({
       role: 'implementer',
@@ -63,7 +63,7 @@ describe('FixtureCodexRunner', () => {
     const baseDirectory = await mkdtemp(path.join(tmpdir(), 'agent-tree-demo-'));
     temporaryDirectories.push(baseDirectory);
     const workspace = await createRunWorkspace('fixture-replay', { baseDirectory });
-    const runner = new FixtureCodexRunner({ delayMs: 0 });
+    const runner = new FixtureCodexRunner(0);
     const request = {
       role: 'implementer' as const,
       prompt: 'Implement the fix.',
@@ -74,7 +74,7 @@ describe('FixtureCodexRunner', () => {
 
     await runner.run(request);
     await expect(runner.run(request)).resolves.toMatchObject({
-      resumed: true,
+      threadId: 'fixture-planner',
       finalResponse: expect.stringContaining('Changed the retry loop'),
     });
 

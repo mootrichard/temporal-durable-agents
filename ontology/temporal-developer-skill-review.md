@@ -86,6 +86,6 @@ The ontology's current scope intentionally omits SDK-specific APIs, detailed ope
 Package the skill, ontology, SHACL shapes, and query/validation tools together. Since Temporal already publishes a Codex plugin wrapper, choose one of two clear paths:
 
 - **Upstream contribution:** propose ontology-backed terminology and reference metadata to `temporalio/skill-temporal-developer`.
-- **Project plugin:** depend on or periodically sync the official skill, then add this ontology, Chaos City alignment, TypeScript project rules, and validation tooling as a separate layer.
+- **Project plugin:** depend on or periodically sync the official skill, then add this ontology, the demo alignment, TypeScript project rules, and validation tooling as a separate layer.
 
 The project-plugin path offers immediate value here. The upstream-contribution path offers the larger ecosystem benefit after the ontology stabilizes and its competency tests demonstrate fewer agent errors.

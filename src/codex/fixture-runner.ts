@@ -1,14 +1,16 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import type {
+  CodexRole,
   CodexRunHooks,
   CodexRunRequest,
   CodexRunResult,
   CodexRunner,
 } from './types.js';
 
-const fixtureResponses = {
+const fixtureResponses: Record<CodexRole, string> = {
   planner: JSON.stringify({
     diagnosis:
       'The retry helper exceeds its documented total-attempt limit. Source and tests can be investigated independently.',
@@ -35,18 +37,17 @@ const fixtureResponses = {
     'retry-limit.test.ts defines maxAttempts as the total call limit and expects exactly three calls. The other three tests already pass.',
   implementer:
     'Changed the retry loop from <= to < so maxAttempts is the total attempt count. No other files changed.',
-} as const;
+};
+
+const defect = 'attempt <= maxAttempts';
+const fix = 'attempt < maxAttempts';
 
 export class FixtureCodexRunner implements CodexRunner {
-  private readonly delayMs: number;
-
-  constructor(options: { delayMs?: number } = {}) {
-    this.delayMs = options.delayMs ?? 1_500;
-  }
+  constructor(private readonly delayMs = 1_500) {}
 
   async run(request: CodexRunRequest, hooks: CodexRunHooks = {}): Promise<CodexRunResult> {
     const threadId = request.threadId ?? `fixture-${request.role}`;
-    hooks.onCheckpoint?.({ threadId, threadTurnNumber: request.threadId ? 2 : 1 });
+    hooks.onThread?.(threadId);
     hooks.onProgress?.({
       id: `${request.role}-thread`,
       type: 'thread',
@@ -61,8 +62,6 @@ export class FixtureCodexRunner implements CodexRunner {
       }
       const filename = path.join(request.workspace, 'src/retry.ts');
       const source = await readFile(filename, 'utf8');
-      const defect = 'attempt <= maxAttempts';
-      const fix = 'attempt < maxAttempts';
       const needsFix = source.includes(defect);
       if (needsFix) {
         await writeFile(filename, source.replace(defect, fix));
@@ -87,16 +86,9 @@ export class FixtureCodexRunner implements CodexRunner {
     return {
       threadId,
       finalResponse: fixtureResponses[request.role],
-      resumed: request.threadId !== undefined,
-      usage: {
-        inputTokens: request.role === 'planner' ? 240 : 180,
-        outputTokens: request.role === 'planner' ? 120 : 70,
-      },
+      usage: request.role === 'planner'
+        ? { inputTokens: 240, outputTokens: 120 }
+        : { inputTokens: 180, outputTokens: 70 },
     };
   }
-}
-
-async function delay(milliseconds: number): Promise<void> {
-  if (milliseconds <= 0) return;
-  await new Promise((resolve) => setTimeout(resolve, milliseconds));
 }

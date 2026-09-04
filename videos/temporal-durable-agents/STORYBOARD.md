@@ -30,10 +30,10 @@ captions: none
 - type: hook
 - blueprint: compose
 - scene: A single clean title sits above the real four-pane agent console; the Workflow ID remains visible.
-- asset_candidates: .media/images/image_003.png, .media/images/logo_001.svg
+- asset_candidates: assets/image_005.png, .media/images/logo_001.svg
 - narrativeRole: Open on the outcome Temporal enables, not the implementation; establish the failure test in five words.
-- focal: .media/images/image_003.png
-- roles: .media/images/image_003.png = primary product proof · .media/images/logo_001.svg = small brand anchor
+- focal: assets/image_005.png
+- roles: assets/image_005.png = primary product proof (Temporal-run agent consoles, Workflow ID temporal-a4873a7c) · .media/images/logo_001.svg = small brand anchor
 
 Use the real agent-console capture as the ground. “KILL” should feel like an action, not a slogan. Source: `README.md` lines 3–12 and `docs/talk-track.md` lines 44–67.
 
@@ -54,12 +54,12 @@ Scene 3: none; cut immediately after the hook lands.
 - type: product_intro
 - blueprint: compose
 - scene: Keep the complete four-worker workspace framed throughout, then simplify its panes into a labeled execution tree in place.
-- asset_candidates: .media/images/image_003.png, .media/images/image_004.png
+- asset_candidates: assets/image_005.png
 - narrativeRole: Land the complete value claim by beat two and give the audience the project’s defining visual model.
-- focal: .media/images/image_003.png
-- roles: .media/images/image_003.png = full workspace background · .media/images/image_004.png = supporting execution-tree reference
+- focal: assets/image_005.png
+- roles: assets/image_005.png = Temporal-run agent consoles (live capture) · execution tree drawn in place
 
-The execution tree is coordinator → two investigators + test runner → implementation → final verification. Source: `docs/presentation-outline.md` lines 17–36 and `README.md` lines 118–137.
+The execution tree is coordinator → two investigators + test runner → implementation → final verification. Source: `docs/presentation-outline.md` lines 17–36 and `README.md` lines 8–33.
 
 Scene 1 (0.0–0.55s): the complete execution-tree composition settles as one unit.
 Scene 2 (0.55–0.75s): the durability rail gains quiet emphasis.
@@ -100,10 +100,10 @@ Scene 3 (0.75–3.2s): hold the failed-state proof, then cut.
 - type: product_intro
 - blueprint: compose
 - scene: Keep the complete architecture strip visible: FixWorkflow → Child Workflows → Activities → Event History, ending on a stable Workflow ID.
-- asset_candidates: .media/images/image_004.png, .media/images/logo_001.svg
+- asset_candidates: .media/images/logo_001.svg
 - narrativeRole: Explain the architecture through responsibility boundaries, proving the demo uses Temporal primitives for specific reasons.
-- focal: .media/images/image_004.png
-- roles: .media/images/image_004.png = background implementation proof · .media/images/logo_001.svg = supporting brand anchor
+- focal: none (typographic responsibility strip)
+- roles: .media/images/logo_001.svg = supporting brand anchor
 
 The Workflow is deterministic orchestration. Child Workflows own delegated branch identity. Activities own nondeterministic external work. Source: `docs/architecture.md` lines 23–43 and `docs/presentation-outline.md` lines 77–109.
 
@@ -123,11 +123,11 @@ Scene 3 (0.8–4.2s): hold for the architecture read, then cut.
 - transition_in: hard-cut
 - type: feature_showcase
 - blueprint: compose
-- scene: One Temporal product screen sits beside three plain receipts: Worker fleet offline, Event History available, Workflow ID unchanged.
-- asset_candidates: .media/images/image_004.png, .media/images/image_003.png
+- scene: The frozen Workflow timeline (Compute offline) sits beside three plain receipts: Worker fleet offline, Event History available, Workflow ID unchanged.
+- asset_candidates: assets/image_006.png
 - narrativeRole: Deliver the central live-demo proof: the process tree is disposable while the logical execution remains open.
-- focal: .media/images/image_004.png
-- roles: .media/images/image_004.png = primary product proof
+- focal: assets/image_006.png
+- roles: assets/image_006.png = primary product proof (Workflow timeline while the Worker fleet is offline)
 
 Pause the music under “Compute disappeared.” Preserve the distinction between the frozen API snapshot and Temporal’s surviving history. Source: `docs/talk-track.md` lines 44–58 and `docs/architecture.md` lines 81–99.
 
@@ -148,12 +148,12 @@ Scene 3 (0.75–4.4s): hold the contrast between compute and identity, then cut.
 - type: feature_showcase
 - blueprint: compose
 - scene: A fixed Event History ledger points to a replacement Worker that reuses results and resumes unfinished work.
-- asset_candidates: .media/images/image_005.png, .media/images/image_004.png
+- asset_candidates: none
 - narrativeRole: Show exactly how recovery targets unfinished work instead of restarting the entire run.
-- focal: .media/images/image_005.png
-- roles: .media/images/image_005.png = background replay/code evidence · .media/images/image_004.png = supporting heartbeat reference
+- focal: none (ledger and receipts are typographic)
+- roles: none
 
-Every on-screen receipt must map to a real behavior: replay consumes completed results; heartbeats provide application checkpoints; retry schedules unfinished Activities. Source: `README.md` lines 126–137 and `docs/presentation-outline.md` lines 126–140.
+Every on-screen receipt must map to a real behavior: replay consumes completed results; heartbeats provide application checkpoints; retry schedules unfinished Activities. Source: `README.md` lines 18–33 and `docs/presentation-outline.md` lines 126–140.
 
 Scene 1 (0.0–0.55s): the complete replay explanation settles as one unit.
 Scene 2 (0.55–0.8s): the resumed-thread receipt gains quiet emphasis.
@@ -175,7 +175,7 @@ Scene 3 (0.8–4.4s): hold long enough to compare reused and unfinished work.
 - focal: .media/images/image_001.png
 - roles: .media/images/image_001.png = hero recovered product proof
 
-Use the real screenshot and diff, with no invented performance metric. Source: `README.md` lines 108–116 and `docs/talk-track.md` lines 60–67.
+Use the real screenshot and diff, with no invented performance metric. Source: `README.md` lines 18–33 and `docs/talk-track.md` lines 60–67.
 
 Compose: one fixed product screen and three co-resident completion receipts. No stamp overlay or weight-transfer motion.
 
@@ -199,7 +199,7 @@ Scene 3 (0.75–3.4s): hold the verified result, then cut.
 - focal: .media/images/logo_001.svg
 - roles: .media/images/logo_001.svg = hero official brand lockup
 
-Final on-screen line: “The Worker executes the work. It does not own it.” Small footer: “Event History records orchestration. Applications own idempotency.” Source: `docs/talk-track.md` lines 69–87 and `docs/architecture.md` lines 101–101.
+Final on-screen line: “The Worker executes the work. It does not own it.” Small footer: “Event History records orchestration. Applications own idempotency.” Source: `docs/talk-track.md` lines 85–95 and `docs/architecture.md` lines 101–101.
 
 Compose: a clean centered lockup with no proof fragments or decorative overlays.
 

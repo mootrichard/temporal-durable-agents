@@ -1,23 +1,29 @@
 import { Codex, type ThreadEvent } from '@openai/codex-sdk';
 
 import type {
+  CodexProgressEvent,
+  CodexRole,
   CodexRunHooks,
   CodexRunRequest,
   CodexRunResult,
   CodexRunner,
 } from './types.js';
 
-export class LiveCodexRunner implements CodexRunner {
-  private readonly codex: Codex;
-  private readonly model?: string;
+type ThreadItem = Extract<ThreadEvent, { type: 'item.completed' }>['item'];
 
-  constructor(options: { model?: string } = {}) {
-    this.codex = new Codex();
-    this.model = options.model;
-  }
+const runningMessage: Record<CodexRole, string> = {
+  planner: 'Preparing the delegation plan',
+  'source-investigator': 'Inspecting the implementation',
+  'test-investigator': 'Inspecting the test contract',
+  implementer: 'Applying the minimal fix',
+};
+
+export class LiveCodexRunner implements CodexRunner {
+  private readonly codex = new Codex();
+
+  constructor(private readonly model?: string) {}
 
   async run(request: CodexRunRequest, hooks: CodexRunHooks = {}): Promise<CodexRunResult> {
-    const resumed = request.threadId !== undefined;
     const threadOptions = {
       workingDirectory: request.workspace,
       sandboxMode: request.sandboxMode,
@@ -35,9 +41,7 @@ export class LiveCodexRunner implements CodexRunner {
 
     let threadId = request.threadId;
     let finalResponse = '';
-    let inputTokens = 0;
-    let outputTokens = 0;
-    let lastItemId: string | undefined;
+    let usage = { inputTokens: 0, outputTokens: 0 };
 
     for await (const event of streamed.events) {
       const progress = codexProgressForEvent(event, request.role);
@@ -45,22 +49,13 @@ export class LiveCodexRunner implements CodexRunner {
 
       if (event.type === 'thread.started') {
         threadId = event.thread_id;
-        hooks.onCheckpoint?.({ threadId, threadTurnNumber: resumed ? 2 : 1 });
+        hooks.onThread?.(threadId);
       }
-      if (event.type === 'item.completed') {
-        lastItemId = event.item.id;
-        if (event.item.type === 'agent_message') finalResponse = event.item.text;
-        if (threadId) {
-          hooks.onCheckpoint?.({
-            threadId,
-            threadTurnNumber: resumed ? 2 : 1,
-            lastItemId,
-          });
-        }
+      if (event.type === 'item.completed' && event.item.type === 'agent_message') {
+        finalResponse = event.item.text;
       }
       if (event.type === 'turn.completed') {
-        inputTokens = event.usage.input_tokens;
-        outputTokens = event.usage.output_tokens;
+        usage = { inputTokens: event.usage.input_tokens, outputTokens: event.usage.output_tokens };
       }
       if (event.type === 'turn.failed' || event.type === 'error') {
         const message = event.type === 'error' ? event.message : event.error.message;
@@ -71,74 +66,52 @@ export class LiveCodexRunner implements CodexRunner {
     threadId ??= thread.id ?? undefined;
     if (!threadId) throw new Error('Codex did not emit a thread ID');
     if (!finalResponse) throw new Error('Codex completed without a final response');
-
-    return {
-      threadId,
-      finalResponse,
-      resumed,
-      usage: { inputTokens, outputTokens },
-    };
+    return { threadId, finalResponse, usage };
   }
 }
 
-export function codexProgressForEvent(event: ThreadEvent, role: CodexRunRequest['role']) {
-  if (event.type === 'thread.started') {
-    return {
-      id: `${role}-thread-${event.thread_id}`,
-      type: 'thread' as const,
-      status: 'running' as const,
-      message: `Thread ${event.thread_id.slice(0, 8)} connected`,
-    };
+export function codexProgressForEvent(
+  event: ThreadEvent,
+  role: CodexRole,
+): CodexProgressEvent | undefined {
+  switch (event.type) {
+    case 'thread.started':
+      return {
+        id: `${role}-thread-${event.thread_id}`,
+        type: 'thread',
+        status: 'running',
+        message: `Thread ${event.thread_id.slice(0, 8)} connected`,
+      };
+    case 'turn.started':
+      return { id: `${role}-turn`, type: 'message', status: 'running', message: runningMessage[role] };
+    case 'item.started':
+    case 'item.updated':
+    case 'item.completed': {
+      const completed = event.type === 'item.completed';
+      return {
+        id: `${role}-item-${event.item.id}`,
+        type: 'item',
+        status: completed ? (itemFailed(event.item) ? 'failed' : 'complete') : 'running',
+        message: describeItem(event.item, completed),
+      };
+    }
+    case 'turn.completed':
+      return {
+        id: `${role}-turn`,
+        type: 'message',
+        status: 'complete',
+        message: `${role.replaceAll('-', ' ')} completed`,
+      };
+    case 'turn.failed':
+      return { id: `${role}-turn`, type: 'message', status: 'failed', message: event.error.message };
+    case 'error':
+      return { id: `${role}-turn`, type: 'message', status: 'failed', message: event.message };
+    default:
+      return undefined;
   }
-  if (event.type === 'turn.started') {
-    return {
-      id: `${role}-turn`,
-      type: 'message' as const,
-      status: 'running' as const,
-      message: roleRunningMessage(role),
-    };
-  }
-  if (event.type === 'item.started' || event.type === 'item.updated' || event.type === 'item.completed') {
-    return {
-      id: `${role}-item-${event.item.id}`,
-      type: 'item' as const,
-      status: event.type === 'item.completed'
-        ? itemFailed(event.item) ? 'failed' as const : 'complete' as const
-        : 'running' as const,
-      message: describeItem(event.item, event.type === 'item.completed'),
-    };
-  }
-  if (event.type === 'turn.completed') {
-    return {
-      id: `${role}-turn`,
-      type: 'message' as const,
-      status: 'complete' as const,
-      message: `${roleLabel(role)} completed`,
-    };
-  }
-  if (event.type === 'turn.failed' || event.type === 'error') {
-    return {
-      id: `${role}-turn`,
-      type: 'message' as const,
-      status: 'failed' as const,
-      message: event.type === 'error' ? event.message : event.error.message,
-    };
-  }
-  return undefined;
 }
 
-function roleRunningMessage(role: CodexRunRequest['role']): string {
-  if (role === 'planner') return 'Preparing the delegation plan';
-  if (role === 'source-investigator') return 'Inspecting the implementation';
-  if (role === 'test-investigator') return 'Inspecting the test contract';
-  return 'Applying the minimal fix';
-}
-
-function roleLabel(role: CodexRunRequest['role']): string {
-  return role.replaceAll('-', ' ');
-}
-
-function itemFailed(item: Extract<ThreadEvent, { type: 'item.completed' }>['item']): boolean {
+function itemFailed(item: ThreadItem): boolean {
   if (item.type === 'error') return true;
   return (
     item.type === 'command_execution'
@@ -147,10 +120,7 @@ function itemFailed(item: Extract<ThreadEvent, { type: 'item.completed' }>['item
   ) && item.status === 'failed';
 }
 
-function describeItem(
-  item: Extract<ThreadEvent, { type: 'item.completed' }>['item'],
-  completed: boolean,
-): string {
+function describeItem(item: ThreadItem, completed: boolean): string {
   const verb = completed ? 'Completed' : 'Running';
   switch (item.type) {
     case 'command_execution':

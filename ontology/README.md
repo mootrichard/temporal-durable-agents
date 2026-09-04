@@ -6,8 +6,8 @@ It is not an official Temporal ontology.
 
 Version `0.2.0` answers two questions: **what kinds of things does Temporal talk
 about, and how do those kinds relate?** And **how should an agent use that vocabulary
-to reach reliable implementation guidance?** It keeps Chaos City, SDK APIs, and
-production configuration values in separate layers.
+to reach reliable implementation guidance?** It keeps this demo's vocabulary, SDK
+APIs, and production configuration values in separate layers.
 
 ## Files
 
@@ -64,8 +64,9 @@ The model is designed to answer questions such as:
   those effects.
 - Do not equate a Workflow Definition with a Workflow Execution, or a Worker Program
   with a running Worker Process.
-- Keep project-specific concepts in the root [`CONTEXT.md`](../CONTEXT.md) until a
-  separate Chaos City ontology module is intentionally added.
+- Keep demo-specific concepts (coordinator, investigator, run snapshot, Worker fleet)
+  in [`docs/architecture.md`](../docs/architecture.md) until a separate alignment
+  module is intentionally added.
 - Use current Temporal documentation as the canonical authority when an operational
   skill and the documentation use different terms or guarantees.
 

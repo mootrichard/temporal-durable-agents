@@ -1,14 +1,10 @@
-export type TimelineLaneId =
-  | 'coordinator'
-  | 'source-investigator'
-  | 'test-investigator'
-  | 'test-job';
+import type { NodeId } from './run-snapshot.js';
 
 export type TimelineSpanStatus = 'scheduled' | 'running' | 'complete' | 'failed';
 
 export type TimelineSpan = {
   id: string;
-  laneId: TimelineLaneId;
+  laneId: NodeId;
   label: string;
   detail: string;
   startTime: string;

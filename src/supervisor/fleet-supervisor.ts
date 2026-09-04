@@ -1,7 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import { randomUUID } from 'node:crypto';
-import { Socket } from 'node:net';
 import path from 'node:path';
 
 import {
@@ -10,25 +9,33 @@ import {
   WorkflowExecutionAlreadyStartedError,
   WorkflowNotFoundError,
 } from '@temporalio/client';
+import { defaultPayloadConverter, fromPayloadsAtIndex } from '@temporalio/common';
+import type { temporal } from '@temporalio/proto';
 
+import { snapshotLinePrefix } from '../baseline/orchestrator.js';
+import { temporalAddress } from '../runtime/environment.js';
+import { ensureTemporalReachable } from '../runtime/preflight.js';
+import { createRunWorkspace, getDemoRoot } from '../runtime/workspace.js';
 import {
   applyRunEvent,
   createInitialSnapshot,
+  isRunFinished,
+  traceEvent,
   type DemoMode,
-  type RunNode,
+  type NodeId,
   type RunnerMode,
   type RunSnapshot,
 } from '../shared/run-snapshot.js';
-import type { CodexHeartbeat } from '../temporal/contracts.js';
-import { createRunWorkspace, getDemoRoot } from '../runtime/workspace.js';
-import { temporalTaskQueue } from '../temporal/contracts.js';
-import { FixWorkflow } from '../temporal/workflows.js';
-import {
-  terminateProcessGroup,
-  type RecordedProcessTarget,
-} from './process-targets.js';
-import { projectWorkflowTimeline } from '../temporal/timeline.js';
 import type { WorkflowTimeline } from '../shared/workflow-timeline.js';
+import {
+  childWorkflowId,
+  investigators,
+  temporalTaskQueue,
+  type CodexHeartbeat,
+} from '../temporal/contracts.js';
+import { projectWorkflowTimeline, type ChildHistory } from '../temporal/timeline.js';
+import { FixWorkflow } from '../temporal/workflows.js';
+import { terminateProcessGroup, type RecordedProcessTarget } from './process-targets.js';
 
 type ManagedRun = {
   runId: string;
@@ -39,7 +46,13 @@ type ManagedRun = {
   process?: ChildProcess;
   target?: RecordedProcessTarget;
   expectedExit: boolean;
-  stdoutBuffer: string;
+};
+
+const codexRoleNode: Record<CodexHeartbeat['role'], NodeId> = {
+  planner: 'coordinator',
+  implementer: 'coordinator',
+  'source-investigator': 'source-investigator',
+  'test-investigator': 'test-investigator',
 };
 
 export class FleetSupervisor {
@@ -49,9 +62,7 @@ export class FleetSupervisor {
   private temporalClient?: Client;
 
   async start(mode: DemoMode, runnerMode: RunnerMode): Promise<RunSnapshot> {
-    if (mode === 'temporal') {
-      await ensureTemporalReachable(process.env.TEMPORAL_ADDRESS ?? 'localhost:7233');
-    }
+    if (mode === 'temporal') await ensureTemporalReachable(temporalAddress());
     const runId = `${mode}-${randomUUID().slice(0, 8)}`;
     const workspace = await createRunWorkspace(runId);
     const managed: ManagedRun = {
@@ -61,7 +72,6 @@ export class FleetSupervisor {
       workspace,
       snapshot: createInitialSnapshot(runId, mode, runnerMode),
       expectedExit: false,
-      stdoutBuffer: '',
     };
     this.runs.set(runId, managed);
 
@@ -72,10 +82,8 @@ export class FleetSupervisor {
         taskQueue: temporalTaskQueue(runId),
         args: [{ runId, runnerMode, workspace }],
       });
-      this.spawnTemporalWorker(managed);
-    } else {
-      this.spawnBaseline(managed);
     }
+    this.spawnFleet(managed);
     return managed.snapshot;
   }
 
@@ -84,17 +92,13 @@ export class FleetSupervisor {
     if (managed.mode === 'temporal' && managed.snapshot.workersOnline) {
       try {
         const client = await this.getTemporalClient();
-        const queried = await client.workflow.getHandle(runId).query<RunSnapshot>('snapshot');
-        managed.snapshot = queried;
+        managed.snapshot = await client.workflow.getHandle(runId).query<RunSnapshot>('snapshot');
       } catch (error) {
         if (!isQueryTemporarilyUnavailable(error)) throw error;
       }
-      await this.refreshTemporalProgress(managed);
-      if (
-        (managed.snapshot.phase === 'complete' || managed.snapshot.phase === 'failed')
-        && managed.target
-        && managed.process
-      ) {
+      await this.projectPendingActivities(managed);
+      if (isRunFinished(managed.snapshot) && managed.target && managed.process) {
+        // The Workflow has closed, so the per-run Worker has nothing left to poll.
         managed.expectedExit = true;
         const closed = once(managed.process, 'close');
         terminateProcessGroup(managed.target, this.ownerToken, 'SIGTERM');
@@ -109,30 +113,16 @@ export class FleetSupervisor {
     if (managed.mode !== 'temporal') throw new Error('Workflow timeline is available for Temporal runs');
     const client = await this.getTemporalClient();
     const rootHistory = await client.workflow.getHandle(runId).fetchHistory();
-    const childSpecs = [
-      {
-        workflowId: `${runId}-source-investigator`,
-        laneId: 'source-investigator' as const,
-        label: 'Source investigation',
-      },
-      {
-        workflowId: `${runId}-test-investigator`,
-        laneId: 'test-investigator' as const,
-        label: 'Test investigation',
-      },
-    ];
-    const childHistories = [];
-    for (const child of childSpecs) {
+    const children: ChildHistory[] = [];
+    for (const laneId of investigators) {
+      const workflowId = childWorkflowId(runId, laneId);
       try {
-        childHistories.push({
-          ...child,
-          history: await client.workflow.getHandle(child.workflowId).fetchHistory(),
-        });
+        children.push({ workflowId, laneId, history: await client.workflow.getHandle(workflowId).fetchHistory() });
       } catch (error) {
         if (!(error instanceof WorkflowNotFoundError)) throw error;
       }
     }
-    return projectWorkflowTimeline(runId, rootHistory, childHistories);
+    return projectWorkflowTimeline(runId, rootHistory, children);
   }
 
   async kill(runId: string): Promise<RunSnapshot> {
@@ -142,20 +132,16 @@ export class FleetSupervisor {
     terminateProcessGroup(managed.target, this.ownerToken, 'SIGKILL');
     managed.process = undefined;
     managed.target = undefined;
-    if (managed.mode === 'temporal') {
-      await this.refreshTemporalProgress(managed);
-    }
-    const runFinished = managed.snapshot.phase === 'complete' || managed.snapshot.phase === 'failed';
+    if (managed.mode === 'temporal') await this.projectPendingActivities(managed);
+
+    const baseline = managed.mode === 'baseline';
     managed.snapshot = {
       ...managed.snapshot,
-      phase: managed.mode === 'baseline' ? 'interrupted' : managed.snapshot.phase,
+      phase: baseline ? 'interrupted' : managed.snapshot.phase,
       workersOnline: false,
-      frozen: !runFinished,
+      frozen: !isRunFinished(managed.snapshot),
       sequence: managed.snapshot.sequence + 1,
-      error:
-        managed.mode === 'baseline'
-          ? 'The in-memory coordinator and its process tree were killed.'
-          : managed.snapshot.error,
+      error: baseline ? 'The in-memory coordinator and its process tree were killed.' : managed.snapshot.error,
       nodes: managed.snapshot.nodes.map((node) =>
         node.status === 'running' ? { ...node, status: 'interrupted' } : node,
       ),
@@ -169,21 +155,19 @@ export class FleetSupervisor {
     managed.expectedExit = false;
 
     if (managed.mode === 'baseline') {
+      // Process memory is gone, so the baseline can only begin again from a fresh workspace.
       managed.workspace = await createRunWorkspace(runId);
       managed.snapshot = createInitialSnapshot(runId, managed.mode, managed.runnerMode);
-      this.spawnBaseline(managed);
     } else {
       managed.snapshot = {
         ...managed.snapshot,
-        workersOnline: true,
-        frozen: false,
         error: undefined,
         nodes: managed.snapshot.nodes.map((node) =>
           node.status === 'interrupted' ? { ...node, status: 'running' } : node,
         ),
       };
-      this.spawnTemporalWorker(managed);
     }
+    this.spawnFleet(managed);
     return structuredClone(managed.snapshot);
   }
 
@@ -194,29 +178,22 @@ export class FleetSupervisor {
     await this.temporalConnection?.close();
   }
 
-  private spawnBaseline(managed: ManagedRun): void {
-    this.spawnManaged(managed, 'src/baseline/process.ts', {
-      DEMO_RUN_ID: managed.runId,
-      DEMO_RUNNER_MODE: managed.runnerMode,
-      DEMO_WORKSPACE: managed.workspace,
-    });
-  }
-
-  private spawnTemporalWorker(managed: ManagedRun): void {
-    this.spawnManaged(managed, 'src/temporal/worker.ts', {
-      DEMO_RUN_ID: managed.runId,
-    });
-  }
-
-  private spawnManaged(managed: ManagedRun, entrypoint: string, environment: Record<string, string>): void {
+  /** Launches the run's Worker fleet as a detached process group so the demo can kill exactly that group. */
+  private spawnFleet(managed: ManagedRun): void {
     const root = getDemoRoot();
+    const entrypoint = managed.mode === 'baseline' ? 'src/baseline/process.ts' : 'src/temporal/worker.ts';
     const child = spawn(
       process.execPath,
       ['--import', 'tsx', path.join(root, entrypoint)],
       {
         cwd: root,
         detached: true,
-        env: { ...process.env, ...environment },
+        env: {
+          ...process.env,
+          DEMO_RUN_ID: managed.runId,
+          DEMO_RUNNER_MODE: managed.runnerMode,
+          DEMO_WORKSPACE: managed.workspace,
+        },
         stdio: ['ignore', 'pipe', 'pipe'],
       },
     );
@@ -224,12 +201,24 @@ export class FleetSupervisor {
     managed.process = child;
     managed.target = { pid: child.pid, processGroupId: child.pid, ownerToken: this.ownerToken };
     managed.snapshot = { ...managed.snapshot, workersOnline: true, frozen: false };
-    managed.stdoutBuffer = '';
 
-    child.stdout?.setEncoding('utf8');
-    child.stdout?.on('data', (chunk: string) => this.readBaselineOutput(managed, chunk));
-    child.stderr?.setEncoding('utf8');
-    child.stderr?.on('data', (chunk: string) => process.stderr.write(`[${managed.runId}] ${chunk}`));
+    let buffered = '';
+    child.stdout!.setEncoding('utf8');
+    child.stdout!.on('data', (chunk: string) => {
+      if (managed.mode !== 'baseline') {
+        process.stdout.write(`[${managed.runId}] ${chunk}`);
+        return;
+      }
+      const lines = `${buffered}${chunk}`.split('\n');
+      buffered = lines.pop() ?? '';
+      for (const line of lines) {
+        if (line.startsWith(snapshotLinePrefix)) {
+          managed.snapshot = JSON.parse(line.slice(snapshotLinePrefix.length)) as RunSnapshot;
+        }
+      }
+    });
+    child.stderr!.setEncoding('utf8');
+    child.stderr!.on('data', (chunk: string) => process.stderr.write(`[${managed.runId}] ${chunk}`));
     child.once('close', (code, signal) => {
       if (managed.process !== child) return;
       managed.process = undefined;
@@ -250,17 +239,6 @@ export class FleetSupervisor {
     });
   }
 
-  private readBaselineOutput(managed: ManagedRun, chunk: string): void {
-    if (managed.mode !== 'baseline') return;
-    managed.stdoutBuffer += chunk;
-    const lines = managed.stdoutBuffer.split('\n');
-    managed.stdoutBuffer = lines.pop() ?? '';
-    for (const line of lines) {
-      if (!line.startsWith('DEMO_SNAPSHOT ')) continue;
-      managed.snapshot = JSON.parse(line.slice('DEMO_SNAPSHOT '.length)) as RunSnapshot;
-    }
-  }
-
   private requireRun(runId: string): ManagedRun {
     const managed = this.runs.get(runId);
     if (!managed) throw new Error(`Unknown run ${runId}`);
@@ -269,67 +247,32 @@ export class FleetSupervisor {
 
   private async getTemporalClient(): Promise<Client> {
     if (!this.temporalClient) {
-      this.temporalConnection = await Connection.connect({
-        address: process.env.TEMPORAL_ADDRESS ?? 'localhost:7233',
-      });
+      this.temporalConnection = await Connection.connect({ address: temporalAddress() });
       this.temporalClient = new Client({ connection: this.temporalConnection });
     }
     return this.temporalClient;
   }
 
-  private async refreshTemporalProgress(managed: ManagedRun): Promise<void> {
-    if (!shouldProjectTemporalProgress(managed.snapshot)) return;
+  /**
+   * Overlays pending Activity heartbeats onto the cached snapshot. The Workflow cannot see
+   * in-flight heartbeats, so this is the only live view of a running Codex turn or test file.
+   */
+  private async projectPendingActivities(managed: ManagedRun): Promise<void> {
+    // A settled run must not be pulled back to `running` by a stale heartbeat.
+    if (isRunFinished(managed.snapshot)) return;
     try {
       const client = await this.getTemporalClient();
-      const descriptions = await Promise.all(
-        temporalProgressWorkflowIds(managed.runId).map(async (workflowId) => {
-          try {
-            return await client.workflow.getHandle(workflowId).describe();
-          } catch (error) {
-            if (workflowId !== managed.runId && error instanceof WorkflowNotFoundError) return undefined;
-            throw error;
-          }
-        }),
-      );
-      for (const pending of descriptions.flatMap(
-        (description) => description?.raw.pendingActivities ?? [],
-      )) {
-        if (pending.activityType?.name === 'runTests') {
-          const completedFiles = decodeHeartbeatStringArray(pending.heartbeatDetails);
-          if (!completedFiles) continue;
-          managed.snapshot = {
-            ...managed.snapshot,
-            metrics: {
-              ...managed.snapshot.metrics,
-              completedTests: Math.max(managed.snapshot.metrics.completedTests, completedFiles.length),
-            },
-          };
-          continue;
+      const workflowIds = [managed.runId, ...investigators.map((id) => childWorkflowId(managed.runId, id))];
+      const descriptions = await Promise.all(workflowIds.map(async (workflowId) => {
+        try {
+          return await client.workflow.getHandle(workflowId).describe();
+        } catch (error) {
+          if (workflowId !== managed.runId && error instanceof WorkflowNotFoundError) return undefined;
+          throw error;
         }
-        if (pending.activityType?.name !== 'runCodexTurn') continue;
-        const heartbeat = decodeCodexHeartbeat(pending.heartbeatDetails);
-        if (!heartbeat?.role) continue;
-        const nodeId = nodeForCodexRole(heartbeat.role);
-        managed.snapshot = applyRunEvent(managed.snapshot, {
-          type: 'node',
-          id: nodeId,
-          status: 'running',
-          detail: heartbeat.progress?.message,
-          threadId: heartbeat.threadId,
-          attempt: pending.attempt ?? 1,
-        });
-        if (heartbeat.progress) {
-          managed.snapshot = applyRunEvent(managed.snapshot, {
-            type: 'trace',
-            entry: {
-              id: `${nodeId}-${heartbeat.progress.id}`,
-              nodeId,
-              kind: heartbeat.progress.type === 'item' ? 'tool' : heartbeat.progress.type,
-              status: heartbeat.progress.status,
-              message: heartbeat.progress.message,
-            },
-          });
-        }
+      }));
+      for (const pending of descriptions.flatMap((description) => description?.raw.pendingActivities ?? [])) {
+        managed.snapshot = projectPendingActivity(managed.snapshot, pending);
       }
     } catch (error) {
       if (!isQueryTemporarilyUnavailable(error)) throw error;
@@ -337,80 +280,33 @@ export class FleetSupervisor {
   }
 }
 
-export function shouldProjectTemporalProgress(snapshot: RunSnapshot): boolean {
-  return snapshot.phase !== 'complete' && snapshot.phase !== 'failed';
-}
-
-export function temporalProgressWorkflowIds(runId: string): string[] {
-  return [
-    runId,
-    `${runId}-source-investigator`,
-    `${runId}-test-investigator`,
-  ];
-}
-
-export async function ensureTemporalReachable(address: string, timeoutMs = 350): Promise<void> {
-  const { host, port } = parseTemporalAddress(address);
-  const reachable = await new Promise<boolean>((resolve) => {
-    const socket = new Socket();
-    const finish = (result: boolean) => {
-      socket.destroy();
-      resolve(result);
+export function projectPendingActivity(
+  snapshot: RunSnapshot,
+  pending: temporal.api.workflow.v1.IPendingActivityInfo,
+): RunSnapshot {
+  const details = fromPayloadsAtIndex<unknown>(defaultPayloadConverter, 0, pending.heartbeatDetails?.payloads);
+  if (pending.activityType?.name === 'runTests' && Array.isArray(details)) {
+    return {
+      ...snapshot,
+      metrics: {
+        ...snapshot.metrics,
+        completedTests: Math.max(snapshot.metrics.completedTests, details.length),
+      },
     };
-    socket.setTimeout(timeoutMs);
-    socket.once('connect', () => finish(true));
-    socket.once('timeout', () => finish(false));
-    socket.once('error', () => finish(false));
-    socket.connect(port, host);
+  }
+  if (pending.activityType?.name !== 'runCodexTurn' || !details) return snapshot;
+
+  const heartbeat = details as CodexHeartbeat;
+  const nodeId = codexRoleNode[heartbeat.role];
+  const next = applyRunEvent(snapshot, {
+    type: 'node',
+    id: nodeId,
+    status: 'running',
+    detail: heartbeat.progress?.message,
+    threadId: heartbeat.threadId,
+    attempt: pending.attempt ?? 1,
   });
-  if (!reachable) {
-    throw new Error(`Temporal is offline at ${address}. Start it with npm run temporal:up.`);
-  }
-}
-
-function parseTemporalAddress(address: string): { host: string; port: number } {
-  const separator = address.lastIndexOf(':');
-  if (separator <= 0) return { host: address, port: 7233 };
-  return {
-    host: address.slice(0, separator).replace(/^\[|\]$/g, ''),
-    port: Number.parseInt(address.slice(separator + 1), 10),
-  };
-}
-
-function nodeForCodexRole(role: NonNullable<CodexHeartbeat['role']>): RunNode['id'] {
-  if (role === 'source-investigator') return 'source-investigator';
-  if (role === 'test-investigator') return 'test-investigator';
-  return 'coordinator';
-}
-
-export function decodeCodexHeartbeat(value: Parameters<typeof decodeHeartbeatStringArray>[0]): CodexHeartbeat | undefined {
-  const decoded = decodeHeartbeatPayload(value);
-  return typeof decoded === 'object' && decoded !== null ? decoded as CodexHeartbeat : undefined;
-}
-
-export function decodeHeartbeatStringArray(value: {
-  payloads?: Array<{ data?: Uint8Array | null } | null> | null;
-} | null | undefined): string[] | undefined {
-  const decoded = decodeHeartbeatPayload(value);
-  try {
-    return Array.isArray(decoded) && decoded.every((entry) => typeof entry === 'string')
-      ? decoded
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function decodeHeartbeatPayload(value: {
-  payloads?: Array<{ data?: Uint8Array | null } | null> | null;
-} | null | undefined): unknown {
-  const bytes = value?.payloads?.[0]?.data;
-  if (!bytes) return undefined;
-  try {
-    return JSON.parse(new TextDecoder().decode(bytes));
-  } catch {
-    return undefined;
-  }
+  return heartbeat.progress ? applyRunEvent(next, traceEvent(nodeId, heartbeat.progress)) : next;
 }
 
 function isQueryTemporarilyUnavailable(error: unknown): boolean {
