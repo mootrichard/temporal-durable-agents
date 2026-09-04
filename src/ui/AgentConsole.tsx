@@ -1,7 +1,7 @@
 import { FitAddon } from '@xterm/addon-fit';
 import { Terminal } from '@xterm/xterm';
 import { TerminalWindowIcon, XIcon } from '@phosphor-icons/react';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 
 import type { RunNode, RunSnapshot, RunTraceEntry } from '../shared/run-snapshot.js';
 import '@xterm/xterm/css/xterm.css';
@@ -49,12 +49,11 @@ export function AgentConsole({ onClose, snapshot }: AgentConsoleProps) {
   }
   const attachment = attachmentRef.current;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const frame = window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+    closeButtonRef.current?.focus();
     return () => {
-      window.cancelAnimationFrame(frame);
       document.body.style.overflow = previousOverflow;
     };
   }, []);

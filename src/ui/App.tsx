@@ -43,6 +43,14 @@ type Preflight = {
   temporalReachable: boolean;
 };
 
+type StoredRunSession = {
+  mode: DemoMode;
+  runnerMode: RunnerMode;
+  runIds: Partial<Record<DemoMode, string>>;
+};
+
+const storedRunSessionKey = 'durable-agent-tree-session';
+
 const PHASES = [
   { label: 'Plan', phase: 'planning' },
   { label: 'Investigate', phase: 'investigating' },
@@ -51,9 +59,13 @@ const PHASES = [
 ] as const;
 
 export function App() {
-  const [mode, setMode] = useState<DemoMode>('baseline');
-  const [runnerMode, setRunnerMode] = useState<RunnerMode>('fixture');
+  const [initialSession] = useState(loadStoredRunSession);
+  const [mode, setMode] = useState<DemoMode>(initialSession.mode);
+  const [runnerMode, setRunnerMode] = useState<RunnerMode>(initialSession.runnerMode);
   const [snapshots, setSnapshots] = useState<Snapshots>({});
+  const [sessionReady, setSessionReady] = useState(
+    !initialSession.runIds.baseline && !initialSession.runIds.temporal,
+  );
   const [busy, setBusy] = useState(false);
   const [requestError, setRequestError] = useState<string>();
   const [preflight, setPreflight] = useState<Preflight>();
@@ -73,6 +85,45 @@ export function App() {
   const snapshot = snapshots[mode] ?? createInitialSnapshot('preview', mode, runnerMode);
   const { action, actionLabel, runActive, showRunnerChoice } = deriveRunControlState(snapshot);
   const selectedNode = snapshot.nodes.find(({ id }) => id === selectedNodeId) ?? snapshot.nodes[0]!;
+
+  useEffect(() => {
+    const storedRuns = (['baseline', 'temporal'] as const).flatMap((storedMode) => {
+      const runId = initialSession.runIds[storedMode];
+      return runId ? [{ mode: storedMode, runId }] : [];
+    });
+    if (storedRuns.length === 0) return;
+
+    let active = true;
+    void Promise.all(storedRuns.map(async ({ mode: storedMode, runId }) => {
+      try {
+        return [storedMode, await api<RunSnapshot>(`/api/runs/${runId}`)] as const;
+      } catch {
+        return undefined;
+      }
+    })).then((results) => {
+      if (!active) return;
+      const restored: Snapshots = {};
+      for (const result of results) {
+        if (result) restored[result[0]] = result[1];
+      }
+      setSnapshots(restored);
+      setSessionReady(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!sessionReady) return;
+    saveStoredRunSession(mode, runnerMode, snapshots);
+  }, [
+    mode,
+    runnerMode,
+    sessionReady,
+    snapshots.baseline?.runId,
+    snapshots.temporal?.runId,
+  ]);
 
   useEffect(() => {
     let active = true;
@@ -152,17 +203,20 @@ export function App() {
   const codexReady = preflight === undefined
     ? undefined
     : isCodexLoginReady(preflight.codexLogin);
-  const runtimeReady = (mode !== 'temporal' || preflight?.temporalReachable !== false)
+  const runtimeReady = sessionReady
+    && (mode !== 'temporal' || preflight?.temporalReachable !== false)
     && (runnerMode !== 'live' || codexReady !== false);
-  const runtimeLabel = preflight === undefined
-    ? 'Checking runtime…'
-    : mode === 'temporal' && !preflight.temporalReachable
-      ? `Temporal offline · ${preflight.temporalAddress}`
-      : runnerMode === 'live' && !codexReady
-        ? 'Codex login required'
-        : runnerMode === 'live'
-          ? 'Live Codex ready'
-          : 'Fixture ready';
+  const runtimeLabel = !sessionReady
+    ? 'Restoring run…'
+    : preflight === undefined
+      ? 'Checking runtime…'
+      : mode === 'temporal' && !preflight.temporalReachable
+        ? `Temporal offline · ${preflight.temporalAddress}`
+        : runnerMode === 'live' && !codexReady
+          ? 'Codex login required'
+          : runnerMode === 'live'
+            ? 'Live Codex ready'
+            : 'Fixture ready';
   function chooseMode(nextMode: DemoMode): void {
     setMode(nextMode);
     setHistoryOpen(false);
@@ -284,8 +338,22 @@ export function App() {
             <div className="run-status" aria-live="polite" role="status">
               <span className={snapshot.phase === 'failed' ? 'offline' : snapshot.workersOnline ? 'online' : 'offline'} />
               <div>
-                <strong>{snapshot.phase === 'failed' ? 'Run failed' : snapshot.workersOnline ? 'Running' : 'Workers stopped'}</strong>
-                <small>{snapshot.phase === 'failed' && snapshot.workersOnline ? 'Workers still online' : runnerMode === 'live' ? 'Live Codex' : 'Fixture runtime'}</small>
+                <strong>
+                  {snapshot.phase === 'failed'
+                    ? 'Run failed'
+                    : snapshot.phase === 'complete'
+                      ? 'Run complete'
+                      : snapshot.workersOnline
+                        ? 'Running'
+                        : 'Workers stopped'}
+                </strong>
+                <small>
+                  {(snapshot.phase === 'failed' || snapshot.phase === 'complete') && snapshot.workersOnline
+                    ? 'Workers still online'
+                    : runnerMode === 'live'
+                      ? 'Live Codex'
+                      : 'Fixture runtime'}
+                </small>
               </div>
             </div>
           )}
@@ -419,9 +487,11 @@ export function App() {
             <p id="stop-description">
               {snapshot.phase === 'failed'
                 ? 'This run has failed, but its worker fleet is still online. Stop the workers before starting a clean run.'
-                : mode === 'temporal'
-                ? 'Temporal keeps the run in Event History. Restarting the workers resumes from the last durable checkpoint.'
-                : 'The baseline stores this run in process memory. Stopping the workers clears its in-flight progress.'}
+                : snapshot.phase === 'complete'
+                  ? 'The run is complete. Stop its worker fleet before starting another run.'
+                  : mode === 'temporal'
+                    ? 'Temporal keeps the run in Event History. Restarting the workers resumes from the last durable checkpoint.'
+                    : 'The baseline stores this run in process memory. Stopping the workers clears its in-flight progress.'}
             </p>
             <div className="dialog-actions">
               <button ref={keepRunningRef} className="secondary-action" onClick={() => setConfirmKill(false)} type="button">Keep running</button>
@@ -733,4 +803,61 @@ async function api<T>(url: string, options?: RequestInit): Promise<T> {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function loadStoredRunSession(): StoredRunSession {
+  const fallback: StoredRunSession = {
+    mode: 'baseline',
+    runnerMode: 'fixture',
+    runIds: {},
+  };
+  if (typeof window === 'undefined') return fallback;
+
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(storedRunSessionKey) ?? 'null');
+    if (typeof parsed !== 'object' || parsed === null) return fallback;
+    const candidate = parsed as {
+      mode?: unknown;
+      runnerMode?: unknown;
+      runIds?: { baseline?: unknown; temporal?: unknown };
+    };
+    return {
+      mode: candidate.mode === 'temporal' ? 'temporal' : 'baseline',
+      runnerMode: candidate.runnerMode === 'live' ? 'live' : 'fixture',
+      runIds: {
+        ...(typeof candidate.runIds?.baseline === 'string'
+          ? { baseline: candidate.runIds.baseline }
+          : {}),
+        ...(typeof candidate.runIds?.temporal === 'string'
+          ? { temporal: candidate.runIds.temporal }
+          : {}),
+      },
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function saveStoredRunSession(
+  mode: DemoMode,
+  runnerMode: RunnerMode,
+  snapshots: Snapshots,
+): void {
+  const session: StoredRunSession = {
+    mode,
+    runnerMode,
+    runIds: {
+      ...(snapshots.baseline?.runId && snapshots.baseline.runId !== 'preview'
+        ? { baseline: snapshots.baseline.runId }
+        : {}),
+      ...(snapshots.temporal?.runId && snapshots.temporal.runId !== 'preview'
+        ? { temporal: snapshots.temporal.runId }
+        : {}),
+    },
+  };
+  try {
+    window.localStorage.setItem(storedRunSessionKey, JSON.stringify(session));
+  } catch {
+    // Browser persistence is best-effort; the active in-memory run remains usable.
+  }
 }

@@ -64,6 +64,9 @@ Open [the demo at `http://localhost:8787`](http://localhost:8787).
 6. During the run, click **Kill workers**. Then click **Stop workers**.
 7. Click **Restart workers**. The same Workflow resumes and finishes the repair.
 
+Refresh the page at any point to restore the selected mode and its current run
+from the surviving API supervisor.
+
 If you use **Live Codex**, install the `codex` CLI. Then sign in:
 
 ```bash

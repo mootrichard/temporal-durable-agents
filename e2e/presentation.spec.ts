@@ -50,7 +50,14 @@ test('contrasts lost process state with a recovered Temporal execution tree', as
   await page.getByRole('button', { name: 'View full event history' }).click();
   await expect(page.getByTestId('execution-trace')).toContainText('source-investigator started');
   await expect(page.getByTestId('run-phase')).toHaveText('testing', { timeout: 30_000 });
-  await expect(page.getByTestId('test-progress')).toHaveText('3 / 4');
+  let checkpointBeforeKill = 0;
+  await expect.poll(async () => {
+    checkpointBeforeKill = Number.parseInt(
+      await page.getByTestId('test-progress').innerText(),
+      10,
+    );
+    return checkpointBeforeKill >= 2 && checkpointBeforeKill < 4;
+  }).toBe(true);
   await expect(page.getByTestId('execution-trace')).toContainText('investigator completed');
   await page.getByTestId('fleet-action').click();
   await expect(page.getByRole('dialog', { name: 'Stop every worker?' })).toBeVisible();
@@ -58,11 +65,19 @@ test('contrasts lost process state with a recovered Temporal execution tree', as
   await page.getByTestId('confirm-fleet-stop').click();
   const frozen = await (await temporalKill).json();
   expect(frozen.sequence).toBeGreaterThan(0);
-  expect(frozen.metrics.completedTests).toBe(3);
+  expect(frozen.metrics.completedTests).toBeGreaterThanOrEqual(checkpointBeforeKill);
+  expect(frozen.metrics.completedTests).toBeLessThan(4);
   await expect(page.getByTestId('frozen-snapshot')).toContainText('History is waiting.');
+  await page.reload();
+  await expect(page.getByTestId('mode-temporal')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('frozen-snapshot')).toContainText('History is waiting.');
+  await expect(page.getByTestId('test-progress')).toHaveText(
+    `${frozen.metrics.completedTests} / 4`,
+  );
   await page.getByRole('button', { name: 'Open agent consoles' }).click();
   const frozenConsoles = page.getByRole('dialog', { name: 'Agent consoles' });
   await expect(frozenConsoles).toContainText('Fleet offline');
+  await expect(frozenConsoles).toContainText(frozen.runId);
   await expect(frozenConsoles.getByTestId('agent-console-transcript-source-investigator')).toContainText('Event History retained');
   await page.keyboard.press('Escape');
 

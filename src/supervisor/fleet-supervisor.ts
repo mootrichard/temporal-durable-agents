@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process';
+import { once } from 'node:events';
 import { randomUUID } from 'node:crypto';
 import { Socket } from 'node:net';
 import path from 'node:path';
@@ -89,6 +90,16 @@ export class FleetSupervisor {
         if (!isQueryTemporarilyUnavailable(error)) throw error;
       }
       await this.refreshTemporalProgress(managed);
+      if (
+        (managed.snapshot.phase === 'complete' || managed.snapshot.phase === 'failed')
+        && managed.target
+        && managed.process
+      ) {
+        managed.expectedExit = true;
+        const closed = once(managed.process, 'close');
+        terminateProcessGroup(managed.target, this.ownerToken, 'SIGTERM');
+        await closed;
+      }
     }
     return structuredClone(managed.snapshot);
   }
@@ -134,11 +145,12 @@ export class FleetSupervisor {
     if (managed.mode === 'temporal') {
       await this.refreshTemporalProgress(managed);
     }
+    const runFinished = managed.snapshot.phase === 'complete' || managed.snapshot.phase === 'failed';
     managed.snapshot = {
       ...managed.snapshot,
       phase: managed.mode === 'baseline' ? 'interrupted' : managed.snapshot.phase,
       workersOnline: false,
-      frozen: true,
+      frozen: !runFinished,
       sequence: managed.snapshot.sequence + 1,
       error:
         managed.mode === 'baseline'
@@ -218,15 +230,19 @@ export class FleetSupervisor {
     child.stdout?.on('data', (chunk: string) => this.readBaselineOutput(managed, chunk));
     child.stderr?.setEncoding('utf8');
     child.stderr?.on('data', (chunk: string) => process.stderr.write(`[${managed.runId}] ${chunk}`));
-    child.once('exit', (code, signal) => {
+    child.once('close', (code, signal) => {
       if (managed.process !== child) return;
       managed.process = undefined;
       managed.target = undefined;
+      managed.snapshot = {
+        ...managed.snapshot,
+        workersOnline: false,
+        sequence: managed.snapshot.sequence + 1,
+      };
       if (!managed.expectedExit && managed.snapshot.phase !== 'complete') {
         managed.snapshot = {
           ...managed.snapshot,
           phase: 'failed',
-          workersOnline: false,
           frozen: true,
           error: `${entrypoint} exited with ${signal ?? `code ${code ?? 'unknown'}`}`,
         };

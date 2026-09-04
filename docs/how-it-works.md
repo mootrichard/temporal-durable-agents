@@ -273,6 +273,11 @@ The demo configures these Activity policies:
 | Maximum retry interval | 10 seconds | Caps retry backoff. |
 | Maximum attempts | 5 | Bounds repeated Activity attempts. |
 
+If `runCodexTurn` exhausts all five attempts, the Workflow recognizes
+Temporal's `MAXIMUM_ATTEMPTS_REACHED` failure state and records four retries in
+the failed snapshot. The retry counter therefore remains consistent with Event
+History on both successful and exhausted execution paths.
+
 Each Codex Activity also holds a five-second heartbeat lease. The Activity
 sends one heartbeat before it starts the Codex call, then repeats its current
 heartbeat payload every five seconds until the call settles. SDK checkpoints
@@ -410,6 +415,12 @@ If the local session is missing or unavailable, the Activity starts a
 replacement thread with the same durable prompt and current Git workspace. The
 replacement preserves the assignment and code state while model work can repeat.
 
+The deterministic fixture runner makes its file edit replay-safe. It applies
+the known replacement when the defect is present, accepts the exact fixed state
+when an earlier attempt already wrote it, and rejects any other source state.
+This compare-and-set behavior covers the failure window between the file write
+and the Activity completion event.
+
 ### Test recovery
 
 The test Activity runs files in a fixed order. After each passing file, it
@@ -529,21 +540,22 @@ The most important visual change occurs after the same physical failure:
 
 ### Run controls separate run state from Worker state
 
-A terminal Workflow result doesn't stop the Temporal Worker process. The UI
-therefore derives its primary action from both the run phase and the Worker
-fleet state:
+The supervisor stops a run-specific Temporal Worker after it observes a
+terminal Workflow result. It waits for the process to close, marks the fleet
+offline, and returns the terminal snapshot. The browser can then offer a new run
+without exposing a cleanup action for completed work.
 
 | Situation | Primary action | Meaning |
 | --- | --- | --- |
 | No run exists | **Start run** | Create an isolated workspace and launch the selected runtime. |
 | A nonterminal run has Workers | **Kill workers** | Stop the recorded process group. |
 | A nonterminal run is frozen | **Restart workers** | Restore compute; Temporal continues the same run, while the baseline starts again from an empty in-memory snapshot. |
-| A Temporal run is terminal but its Workers remain online | **Kill workers** | Clean up compute before offering another run. |
-| A baseline run is terminal, or a terminal Temporal run has no Workers | **Start new run** | Choose the runner and create a separate execution. |
+| A terminal run has no Workers | **Start new run** | Choose the runner and create a separate execution. |
 
-This state model keeps a failed run visible as **Run failed** while also showing
-**Workers still online** when cleanup remains. A completed or failed phase and
-an online Worker fleet are separate facts.
+The browser stores the selected mode, runner, and run IDs in local storage. On
+page refresh, it asks the surviving API supervisor for fresh snapshots instead
+of treating browser storage as execution state. If the API restarts, its
+in-memory run registry is gone and stale browser run IDs are discarded.
 
 ## Five sentences to remember
 

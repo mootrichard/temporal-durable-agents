@@ -58,4 +58,27 @@ describe('FixtureCodexRunner', () => {
     expect(source).toContain('attempt < maxAttempts');
     expect(await getWorkspaceDiff(workspace)).toContain('attempt <= maxAttempts');
   });
+
+  it('treats an already-applied implementation as a successful Activity replay', async () => {
+    const baseDirectory = await mkdtemp(path.join(tmpdir(), 'agent-tree-demo-'));
+    temporaryDirectories.push(baseDirectory);
+    const workspace = await createRunWorkspace('fixture-replay', { baseDirectory });
+    const runner = new FixtureCodexRunner({ delayMs: 0 });
+    const request = {
+      role: 'implementer' as const,
+      prompt: 'Implement the fix.',
+      workspace,
+      sandboxMode: 'workspace-write' as const,
+      threadId: 'fixture-planner',
+    };
+
+    await runner.run(request);
+    await expect(runner.run(request)).resolves.toMatchObject({
+      resumed: true,
+      finalResponse: expect.stringContaining('Changed the retry loop'),
+    });
+
+    const source = await readFile(path.join(workspace, 'src/retry.ts'), 'utf8');
+    expect(source.match(/attempt < maxAttempts/g)).toHaveLength(1);
+  });
 });

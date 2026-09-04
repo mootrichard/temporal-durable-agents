@@ -14,12 +14,12 @@ export function isCodexLoginReady(status: string): boolean {
 
 export function deriveRunControlState(snapshot: RunSnapshot): RunControlState {
   const runFinished = snapshot.phase === 'complete' || snapshot.phase === 'failed';
-  const failedTemporalFleetStillOnline = snapshot.phase === 'failed'
+  const terminalTemporalFleetStillOnline = runFinished
     && snapshot.mode === 'temporal'
     && snapshot.workersOnline
     && !snapshot.frozen;
   const runActive = snapshot.runId !== 'preview'
-    && ((!runFinished && !snapshot.frozen) || failedTemporalFleetStillOnline);
+    && ((!runFinished && !snapshot.frozen) || terminalTemporalFleetStillOnline);
   const showRunnerChoice = snapshot.runId === 'preview' || (runFinished && !runActive);
 
   let action: RunControlState['action'];

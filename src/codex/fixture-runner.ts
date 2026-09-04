@@ -61,15 +61,19 @@ export class FixtureCodexRunner implements CodexRunner {
       }
       const filename = path.join(request.workspace, 'src/retry.ts');
       const source = await readFile(filename, 'utf8');
-      if (!source.includes('attempt <= maxAttempts')) {
-        throw new Error('The frozen retry defect was not found in the run workspace');
+      const defect = 'attempt <= maxAttempts';
+      const fix = 'attempt < maxAttempts';
+      const needsFix = source.includes(defect);
+      if (needsFix) {
+        await writeFile(filename, source.replace(defect, fix));
+      } else if (!source.includes(fix)) {
+        throw new Error('The frozen retry contract was not found in the run workspace');
       }
-      await writeFile(filename, source.replace('attempt <= maxAttempts', 'attempt < maxAttempts'));
       hooks.onProgress?.({
         id: `${request.role}-edit`,
         type: 'item',
         status: 'complete',
-        message: 'Applied the one-line retry fix',
+        message: needsFix ? 'Applied the one-line retry fix' : 'Confirmed the retry fix is already applied',
       });
     }
 

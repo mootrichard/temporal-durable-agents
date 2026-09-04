@@ -66,6 +66,11 @@ Wait for **Run complete**. Point in this order:
 
 > “Same execution tree, different Worker fleet. The Worker executes the work; it does not own the work.”
 
+The supervisor stops the run-specific Worker after it observes the terminal
+Workflow result. Point to **Start new run**.
+
+> “The Workflow result remains in Event History after compute exits. The next run gets a separate Workflow ID, workspace, Task Queue, and Worker.”
+
 ## 8:15–10:15 — Honest boundary
 
 > “Durability does not create exactly-once side effects. If an Activity finished a model call and died before Temporal recorded completion, the Activity may retry and make another call. That is why the screen distinguishes completed turns from retried turns.”
