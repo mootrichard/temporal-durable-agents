@@ -95,12 +95,13 @@ can recover it.
 
 | State | Owner | What happens after Worker loss |
 | --- | --- | --- |
-| Plan, branch structure, and completed results | Temporal Event History | Workflow replay reconstructs the same logical run. |
-| In-flight Activity progress | Temporal heartbeat details | A subsequent Activity attempt can read the most recently delivered checkpoint. |
-| Codex conversation context | Local Codex session | The Activity resumes by thread ID when the session still exists. |
+| Plan, branch structure, and completed results | Temporal Service: Event History | Workflow replay reconstructs the same logical run. |
+| In-flight Activity progress | Temporal Service: Activity heartbeat details | A subsequent Activity Task Execution can read the most recently delivered checkpoint. |
+| Codex conversation context | Local Codex session | Activity code resumes the thread by ID when the session still exists. |
 | Source edits | Isolated Git workspace | Files remain on disk for the replacement Worker. |
-| Passed test filenames | Temporal heartbeat details | The retried test Activity skips recorded files. |
-| Live presentation state | Workflow Query plus supervisor projection | The API serves a frozen last-known snapshot while Workers are offline. |
+| Passed test filenames | Temporal Service: Activity heartbeat details | The next Activity Task Execution skips recorded files. |
+| Live run snapshot | Workflow Query plus supervisor heartbeat projection | The API serves a frozen last-known snapshot while Workers are offline. |
+| Workflow timeline | Temporal Service: Event Histories | The API can fetch and project recorded spans without Worker compute. |
 | Worker PID and process group ID | API supervisor memory | The supervisor targets the exact process group that it created. |
 
 The ownership split explains both the recovery and its limit. Event History
@@ -254,41 +255,45 @@ retry policy handle that failure path.
 ### Activities contain effects
 
 Codex calls, file access, Git commands, and test subprocesses can produce
-different results each time they run. They belong in Activities, outside the
-deterministic Workflow sandbox.
+different results each time they run. The project puts these operations in
+Activity Definition code, outside the deterministic Workflow Definition.
 
-Temporal records an Activity result after the Worker reports completion. During
-Workflow replay, the recorded result is reused and the completed Activity
-doesn't execute again. The
-[Temporal Activity model](https://docs.temporal.io/activities) also supports
-retries when an Activity attempt fails or times out.
+When an Activity Function returns, the Worker reports its result to the
+Temporal Service. The Service records an `ActivityTaskCompleted` event and the
+result in Event History. Workflow replay reuses that result and doesn't execute
+the completed Activity Definition again. A Retry Policy can schedule another
+Activity Task Execution after an earlier attempt fails or times out. For more
+information, see the
+[Temporal Activity model](https://docs.temporal.io/activities).
 
 The demo configures these Activity policies:
 
 | Policy | Value | Effect |
 | --- | --- | --- |
-| Start-to-close timeout | 10 minutes | Bounds one Activity attempt. |
-| Heartbeat timeout | 20 seconds | Detects an attempt that stops reporting progress. |
+| Start-to-close timeout | 10 minutes | Bounds one Activity Task Execution. |
+| Heartbeat timeout | 20 seconds | Detects an Activity Task Execution that stops reporting progress. |
 | Initial retry interval | 1 second | Schedules the first retry after a short delay. |
 | Maximum retry interval | 10 seconds | Caps retry backoff. |
-| Maximum attempts | 5 | Bounds repeated Activity attempts. |
+| Maximum attempts | 5 | Bounds the number of Activity Task Executions. |
 
-If `runCodexTurn` exhausts all five attempts, the Workflow recognizes
-Temporal's `MAXIMUM_ATTEMPTS_REACHED` failure state and records four retries in
-the failed snapshot. The retry counter therefore remains consistent with Event
-History on both successful and exhausted execution paths.
+If `runCodexTurn` exhausts all five Activity Task Execution attempts, the
+Workflow recognizes Temporal's `MAXIMUM_ATTEMPTS_REACHED` failure state and
+records four retries in the failed snapshot. The retry counter therefore
+remains consistent with Event History on successful and exhausted execution
+paths.
 
-Each Codex Activity also holds a five-second heartbeat lease. The Activity
-sends one heartbeat before it starts the Codex call, then repeats its current
-heartbeat payload every five seconds until the call settles. SDK checkpoints
-and progress events still trigger immediate heartbeats. The lease prevents a
+Each `runCodexTurn` Activity Execution also holds a five-second heartbeat lease.
+Its Activity code sends one heartbeat before it starts the Codex call, then
+repeats its current heartbeat payload every five seconds until the call settles.
+SDK checkpoints and progress events still trigger immediate heartbeats. The lease prevents a
 quiet model turn from crossing the 20-second heartbeat timeout; it doesn't
 claim that the model made new progress during each interval.
 
-After `SIGKILL`, an in-flight Activity remains assigned until the Temporal
-Service detects a missed heartbeat. The replacement Worker can sit ready during
-that interval. Recovery of that Activity begins after the timeout and retry
-scheduling, so **Restart workers** doesn't imply instant continuation.
+After `SIGKILL`, the in-flight Activity Task Execution remains assigned until
+the Temporal Service detects a missed heartbeat. The replacement Worker can
+sit ready during that interval. Recovery of the Activity Execution begins
+after the timeout and retry scheduling, so **Restart workers** doesn't imply
+instant continuation.
 
 ## How live progress reaches the screen
 
@@ -313,11 +318,12 @@ Every part of that progress path depends on the baseline process. The API keeps
 the last snapshot after the process dies, but the snapshot contains no durable
 continuation.
 
-### The Temporal path while an Activity is running
+### The Temporal path while an Activity Execution is running
 
-The Workflow waits for an Activity result, so it cannot receive intermediate
-Activity events as normal return values. `runCodexTurn` instead puts the most
-recent progress event, role, and thread ID in Activity heartbeat details.
+The Workflow waits for an Activity Execution result, so it cannot receive
+intermediate Activity events as normal return values. `runCodexTurn` instead
+puts the most recent progress event, role, and thread ID in Activity heartbeat
+details.
 
 The supervisor inspects pending Activities for three Workflow IDs: the parent
 and both children. It decodes each heartbeat and overlays the progress onto its
@@ -335,26 +341,40 @@ and default throttle interval for presentation responsiveness. The UI polls the
 API every 650 ms, so the trace is live evidence with subsecond intent rather
 than a complete event log.
 
-### The Temporal path after an Activity completes
+### The Temporal path after an Activity Execution completes
 
 `runCodexTurn` also returns its last 24 trace events as part of the Activity
-result. The parent Workflow deterministically applies those entries to its
-`RunSnapshot`. The Activity result then becomes a recorded fact that replay can
-reuse.
+Execution result. The parent Workflow deterministically applies those entries
+to its `RunSnapshot`. The Temporal Service records the result in an
+`ActivityTaskCompleted` Event for Workflow replay.
 
 The distinction is precise:
 
 | Information | Meaning | Recovery use |
 | --- | --- | --- |
 | Streamed Codex event | A local observation from the running SDK process | Builds the current node and trace display. |
-| Heartbeat detail | The most recently delivered server progress checkpoint | Helps a subsequent Activity attempt resume. |
-| Activity result | A completed operation recorded for the Workflow | Reused during Workflow replay. |
+| Heartbeat detail | The most recently delivered progress checkpoint in the Temporal Service | Helps a subsequent Activity Task Execution resume. |
+| Activity Execution result | A completed operation recorded in Event History | Reused during Workflow replay. |
 
 The
 [Activity heartbeat documentation](https://docs.temporal.io/encyclopedia/detecting-activity-failures#activity-heartbeat)
 describes the same boundary. Heartbeat payloads can checkpoint progress for a
-subsequent attempt. A Workflow cannot read that payload while the Activity is
-still executing.
+subsequent Activity Task Execution. A Workflow cannot read that payload while
+the Activity Execution is still running.
+
+### The agent consoles and Workflow timeline
+
+The **Agent consoles** dialog renders the current `RunSnapshot.trace` as four
+xterm panes, one for each logical job. It replays the trace entries present
+when the dialog opens and follows snapshot updates while the UI polls. These
+panes are a read-only projection; they aren't direct, interactive subprocess
+terminals.
+
+The **Workflow timeline** is available only for Temporal runs. The API fetches
+the parent and Child Workflow Event Histories and groups Workflow and Activity
+events into execution spans. The dialog polls this projection once per second.
+Because this path reads Event History instead of issuing a Workflow Query, it
+continues to work while the Worker fleet is offline.
 
 ## What happens when the fleet dies
 
@@ -372,9 +392,10 @@ Before sending `SIGKILL`, the supervisor verifies all of the following:
 The supervisor then signals the negative process group ID, which targets that
 exact group. The API process remains alive and freezes the last known snapshot.
 
-When you click **Restart workers**, the baseline path creates a fresh fixture
-workspace and a new initial snapshot. Counters return to zero because no durable
-system recorded the baseline continuation.
+When you click **Restart workers**, the baseline path reuses the supervisor's
+run ID but creates a fresh fixture workspace and initial snapshot. Counters
+return to zero because the ID is registry metadata; no durable system recorded
+the baseline continuation.
 
 ### Act II: Event History owns the continuation
 
@@ -395,8 +416,9 @@ unchanged.
 
 When replacement Workers start, they poll the same run-specific Task Queue.
 Workflow replay executes `FixWorkflow` from the beginning while substituting
-recorded results for completed operations. Temporal schedules a new attempt for
-the interrupted Activity after failure detection and the retry policy permits it.
+recorded results for completed operations. After failure detection, the Retry
+Policy can schedule another Activity Task Execution for the interrupted
+Activity Execution.
 
 ### Codex recovery
 
@@ -436,24 +458,25 @@ Three statements keep the architecture honest.
 
 ### Recorded completion is durable orchestration evidence
 
-When an Activity completion reaches the Temporal Service, its result appears in
-Event History. Workflow replay uses that result and avoids a second execution of
-the completed Activity.
+When the Worker's completion report reaches the Temporal Service, the Service
+records an `ActivityTaskCompleted` Event and the Activity Execution result in
+Event History. Workflow replay reuses that result and doesn't execute the
+completed Activity Definition again.
 
 ### A heartbeat is a resumability hint
 
-A heartbeat reports liveness and can carry application progress. It doesn't
-close the Activity. The Worker and Temporal SDK throttle delivery according to
-configured intervals. The server can therefore hold an earlier checkpoint than
-the Activity emitted locally.
+An Activity Heartbeat reports liveness and can carry application progress. It
+doesn't close the Activity Execution. The Worker and Temporal SDK throttle
+delivery according to configured intervals. The Temporal Service can therefore
+store an earlier checkpoint than the Activity code emitted locally.
 
 ### External effects require application safety
 
-An Activity can finish an external effect and die before its completion reaches
-the Temporal Service. A later attempt can repeat that effect. The
+An Activity Task Execution can finish an external effect before its Worker
+dies. If the Worker's completion report does not reach the Temporal Service, a
+later Activity Task Execution can repeat that effect. The
 [Activity Execution documentation](https://docs.temporal.io/activity-execution)
-describes the failure window in which an Activity function ran before its Worker
-crashed.
+describes this failure window.
 
 For an AI agent, a repeated effect might mean:
 
@@ -511,10 +534,10 @@ and uses Workflow IDs for individual execution identity.
 
 ### The development server is part of the demo boundary
 
-The Docker Compose configuration starts a development Temporal server without
-a mounted persistence volume. The server survives the Worker process kill that
-the presentation performs. The demonstration makes no claim about server,
-container, disk, or machine recovery.
+The Docker Compose configuration runs a local Temporal Service through the
+development server without a mounted persistence volume. The Service survives
+the Worker process kill that the presentation performs. The demonstration
+makes no claim about server, container, disk, or machine recovery.
 
 ## Read the screen as evidence
 
@@ -524,8 +547,10 @@ Each UI element answers one architectural question.
 | --- | --- |
 | Worker fleet status | Is compute available? |
 | Node status and thread receipt | Which logical branch is active, and which Codex session backs it? |
-| Attempt number | Has Temporal scheduled another Activity attempt? |
+| Attempt number | Has Temporal scheduled another Activity Task Execution? |
 | Live execution trace | Are independent threads and tools producing real progress? |
+| Agent consoles | What work did each logical job report before and after the console opened? |
+| Workflow timeline | Which parent, child, and Activity spans are recorded in Event History? |
 | Recorded and retried turn counters | Which model turns completed, and how much retry occurred? |
 | Test checkpoint | How much file-level verification can a retry reuse? |
 | State ownership ledger | Which system can recover each kind of state? |
@@ -591,9 +616,9 @@ remove the local session in this demonstration.
 
 ### Model calls during replay
 
-Replay reuses a completed Activity result. Replay itself doesn't call the model.
-An incomplete Activity can receive another attempt, and that attempt can make
-another model call.
+Workflow replay reuses a completed Activity Execution result and doesn't call
+the model. An incomplete Activity Execution can receive another Activity Task
+Execution, which can make another model call.
 
 ### The Git workspace's role
 
@@ -611,11 +636,12 @@ snapshot. This presentation projection sits outside Workflow logic.
 
 Use this line:
 
-> The application is identical in both acts. The owner of progress changes.
+> The bounded repair and tools are the same in both acts. The owner of progress
+> changes.
 
 Then show the proof in this order: parallel agents, physical process kill,
-frozen state, replacement Workers, preserved Workflow ID, completed tests, and
-the final diff.
+frozen state, recorded Event History, replacement Workers, preserved Workflow
+ID, completed tests, and the final diff.
 
 ## Source map
 
@@ -628,6 +654,9 @@ Use these files to connect the mental model to the implementation:
 | Heartbeating Codex and test Activities | [`src/temporal/activities.ts`](../src/temporal/activities.ts) |
 | Worker and heartbeat-throttle configuration | [`src/temporal/worker.ts`](../src/temporal/worker.ts) |
 | Live Codex SDK event translation | [`src/codex/live-runner.ts`](../src/codex/live-runner.ts) |
+| Agent console projection | [`src/ui/AgentConsole.tsx`](../src/ui/AgentConsole.tsx) |
+| Workflow timeline UI | [`src/ui/WorkflowTimeline.tsx`](../src/ui/WorkflowTimeline.tsx) |
+| Event History timeline projection | [`src/temporal/timeline.ts`](../src/temporal/timeline.ts) |
 | Deterministic stage runner | [`src/codex/fixture-runner.ts`](../src/codex/fixture-runner.ts) |
 | Snapshot and trace projection | [`src/shared/run-snapshot.ts`](../src/shared/run-snapshot.ts) |
 | File-level test checkpoints | [`src/shared/checkpointed-tests.ts`](../src/shared/checkpointed-tests.ts) |
@@ -636,6 +665,7 @@ Use these files to connect the mental model to the implementation:
 | Run-control state machine | [`src/ui/run-control-state.ts`](../src/ui/run-control-state.ts) |
 | Real Worker-replacement proofs | [`tests/temporal-recovery.integration.test.ts`](../tests/temporal-recovery.integration.test.ts) |
 | Browser-level two-act proof | [`e2e/presentation.spec.ts`](../e2e/presentation.spec.ts) |
+| Browser-level agent-console proof | [`e2e/agent-console.spec.ts`](../e2e/agent-console.spec.ts) |
 
 For the spoken sequence, use
 [Talk track and exact live-demo script](talk-track.md).

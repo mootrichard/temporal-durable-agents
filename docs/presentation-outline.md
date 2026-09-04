@@ -45,6 +45,8 @@ flow, state ownership, and recovery.
 - Codex and test subprocesses inherit that process group.
 - The orchestrator streams `RunSnapshot` updates to the API through standard
   output. The API caches the most recent snapshot for the browser.
+- The agent consoles group the existing trace by logical job and follow new
+  events.
 
 ### How it runs
 
@@ -71,8 +73,9 @@ The supervisor sends `SIGKILL` to the recorded process group. The orchestrator,
 Codex subprocesses, and test subprocesses stop together. The API can display its
 cached snapshot, but the snapshot cannot schedule the next step.
 
-**Restart workers** creates a fresh workspace and snapshot, then starts a fresh
-orchestration run. The process that executes the tree also owns the tree.
+**Restart workers** reuses the supervisor's run ID but creates a fresh
+workspace, snapshot, and orchestration process. The retained ID is registry
+metadata; the process that executes the tree still owns the continuation.
 
 ## Path two: history-owned orchestration
 
@@ -80,11 +83,15 @@ orchestration run. The process that executes the tree also owns the tree.
 
 - `FixWorkflow` owns the end-to-end sequence.
 - Two `SubagentWorkflow` executions give the investigations stable identities.
-- Codex calls, tests, Git access, and filesystem access run as Activities.
-- Activity heartbeats carry resumable progress.
+- Codex calls, tests, Git access, and filesystem access execute in Activity
+  Definition code.
+- The Temporal Service stores Activity heartbeat details for a later Activity
+  Task Execution.
 - A Workflow Query returns Workflow state while Worker compute is available.
-- The API projects pending Activity heartbeats into the live UI.
+- The API projects pending Activity heartbeat details into the live UI.
 - The Temporal Service runs outside the killable Worker process group.
+- The Workflow timeline fetches parent and Child Workflow Event Histories and
+  groups their events into execution spans.
 
 ### How it runs
 
@@ -103,8 +110,8 @@ orchestration run. The process that executes the tree also owns the tree.
 | --- | --- | --- |
 | Parent Workflow | Own the durable sequence | Reconstruct the run after Worker replacement. |
 | Child Workflow | Own one delegated branch | Give each investigation a stable ID and separate history. |
-| Activity | Execute external and nondeterministic work | Apply timeouts, retries, and cancellation outside Workflow code. |
-| Heartbeat | Report liveness and application progress | Give a later Activity attempt a checkpoint. |
+| Activity | Run external effects outside Workflow Definition code | Apply timeouts, Retry Policies, and cancellation to Activity Executions. |
+| Activity Heartbeat | Report liveness and application progress | Give a later Activity Task Execution a checkpoint. |
 | Event History | Record decisions and completed results | Supply durable facts during replay. |
 | Worker | Execute Workflow Tasks and Activity Tasks | Make compute replaceable. |
 
@@ -121,6 +128,8 @@ The surviving state includes:
 - completed Child Workflow results;
 - the most recently delivered Activity heartbeat details;
 - the existing Git workspace;
+- the recorded Workflow timeline, which remains readable without Worker
+  compute;
 - the API's frozen view of the last visible state.
 
 Recovery proceeds as follows:
@@ -149,8 +158,9 @@ resume application work from application-defined checkpoints.
 | Completed operation | Value held by the process | Result recorded by Temporal | Replay reuses recorded work. |
 | Interrupted operation | Process death ends the run | Activity timeout and retry | Recovery targets unfinished work. |
 | In-flight progress | Local callback state | Activity heartbeat details | A later attempt can use an application checkpoint. |
-| Restart | Fresh workspace and snapshot | New Worker, same Workflow Execution | Compute replacement preserves execution identity. |
+| Restart | Same supervisor ID, fresh workspace and snapshot | New Worker, same Workflow Execution and workspace | Only the Temporal path preserves execution identity and code state. |
 | Visibility | Standard-output snapshot | Workflow Query and heartbeat projection | The UI separates durable state from live attempt progress. |
+| Recorded execution timeline | Unavailable | Parent and Child Workflow Event Histories | Recorded spans remain inspectable without Worker compute. |
 
 The essential change is state ownership. Temporal gives the run a durable
 identity, records completed orchestration facts, and schedules unfinished work.
@@ -159,11 +169,12 @@ identity, records completed orchestration facts, and schedules unfinished work.
 
 - Temporal owns orchestration recovery. The application owns model correctness,
   business correctness, idempotency, deduplication, and reconciliation.
-- Event History records orchestration facts. Git or artifact storage holds files.
-- A heartbeat is a liveness signal and checkpoint. Activity completion is a
-  separate event.
-- An Activity retry can repeat an external effect when the effect finishes before
-  Temporal records the completion.
+- The Temporal Service stores orchestration Events in Event History. Git or
+  artifact storage holds files.
+- An Activity Heartbeat is a liveness signal and checkpoint. An
+  `ActivityTaskCompleted` event records completion separately.
+- An Activity Task Execution can repeat an external effect when an earlier
+  execution finishes the effect before the Temporal Service records completion.
 - Worker loss removes compute. Workflow cancellation or termination ends the
   logical execution.
 - This demonstration proves Worker-process recovery on one machine. Shared
@@ -187,8 +198,10 @@ Closing line:
 
 - Baseline: concurrent branches, process-group kill, and empty restart state.
 - Temporal before failure: Workflow ID, Child Workflow IDs, thread receipts, and
-  Activity attempts.
-- Temporal during failure: frozen snapshot with Workers offline.
+  Activity Task Execution attempts.
+- Temporal during failure: frozen snapshot, agent consoles showing retained
+  history, and the Workflow timeline showing recorded parent, child, and
+  Activity spans while Workers are offline.
 - Temporal after recovery: same Workflow ID, reused result or restored test
   checkpoint, final tests, and Git diff.
 
@@ -198,6 +211,10 @@ Closing line:
 - Process and Worker lifecycle: `src/supervisor/fleet-supervisor.ts`
 - Parent and Child Workflows: `src/temporal/workflows.ts`
 - Heartbeating Activities: `src/temporal/activities.ts`
+- Agent consoles: `src/ui/AgentConsole.tsx`
+- Workflow timeline UI: `src/ui/WorkflowTimeline.tsx`
+- Event History projection: `src/temporal/timeline.ts`
 - Snapshot and trace state: `src/shared/run-snapshot.ts`
 - Browser proof: `e2e/presentation.spec.ts`
+- Agent-console proof: `e2e/agent-console.spec.ts`
 - Worker-replacement proof: `tests/temporal-recovery.integration.test.ts`

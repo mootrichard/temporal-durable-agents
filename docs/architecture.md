@@ -4,8 +4,8 @@
 
 ```mermaid
 flowchart LR
-  B["Browser: one-screen presentation"] --> A["API + fleet supervisor"]
-  A --> T["Temporal development server"]
+  B["Browser: presentation, agent consoles, and Workflow timeline"] --> A["API + fleet supervisor"]
+  A -->|"start / query / fetch history"| T["Local Temporal Service (development server)"]
   A -->|"spawn / exact PGID"| W["Killable Worker fleet"]
   W --> C["Codex SDK / CLI subprocesses"]
   W --> X["Vitest subprocesses"]
@@ -18,7 +18,7 @@ flowchart LR
   class W,C,X killable;
 ```
 
-The browser, API, supervisor, and Temporal server remain outside the killable group. The supervisor creates a detached Worker group, records its PID/PGID plus an ownership token, validates the target, and signals the negative PGID. Codex and test subprocesses inherit that process group.
+The browser, API, supervisor, and Temporal Service remain outside the killable group. The supervisor creates a detached Worker group, records its PID/PGID plus an ownership token, validates the target, and signals the negative PGID. Codex and test subprocesses inherit that process group.
 
 ## Durable execution tree
 
@@ -52,10 +52,10 @@ describes the parent Workflow and both Child Workflows, reads their pending
 Activity heartbeat details, and overlays those details onto its cached
 snapshot. The Workflow cannot read this in-flight heartbeat payload.
 
-When the Activity completes, it returns its recent trace with the Codex result.
-The Workflow applies that result to its snapshot, and Event History records the
-Activity completion. A replacement Worker can replay the recorded result
-without rerunning the completed Activity.
+When the Activity Function returns, the Worker reports its result. The Temporal
+Service records an `ActivityTaskCompleted` event and the result in Event
+History. A replacement Worker can replay Workflow code with that recorded
+result without executing the completed Activity Definition again.
 
 The supervisor stops projecting pending heartbeats after the cached snapshot
 reaches `complete` or `failed`. This terminal-state guard prevents a stale
@@ -63,40 +63,47 @@ pending heartbeat from changing a settled node back to `running`.
 
 This split gives the presentation responsive progress while preserving the
 semantic boundary between a heartbeat checkpoint and a completed Activity
-result. For the full sequence and its recovery limits, see
+Execution result. For the full sequence and its recovery limits, see
 [How the durable agent tree works](how-it-works.md).
+
+The Workflow timeline follows a third visibility path. The API fetches the
+parent and Child Workflow Event Histories and projects their recorded events
+into execution spans. This path remains available while the Worker fleet is
+offline because history retrieval does not require a Workflow Query.
 
 ## State ledger
 
 | State | Owner | Recovery behavior |
 |---|---|---|
-| Plan, fan-out, completed steps | Temporal Event History | Replayed into the same logical execution tree |
+| Plan, fan-out, completed steps | Temporal Service: Event History | Replayed into the same logical execution tree |
 | Codex conversation context | Local Codex session | Resume by heartbeat thread ID; replace from durable assignment if absent |
 | Source edits | Git run workspace | Remain across Worker replacement |
-| Passed test filenames | Activity heartbeat details | Retried Activity skips completed files |
-| Live Codex progress | Pending Activity heartbeat details | Supervisor projects progress until the Activity completes |
+| Passed test filenames | Temporal Service: Activity heartbeat details | The next Activity Task Execution skips completed files |
+| Live Codex progress | Temporal Service: pending Activity heartbeat details | Supervisor projects progress until the Activity Execution completes |
 | UI while Workers are absent | API’s last successful query | Rendered as a visibly frozen snapshot |
 | Browser run selection | Browser local storage | Page refresh reloads current snapshots from the surviving API supervisor |
+| Workflow timeline | Temporal Service: Event Histories | API can project recorded spans while Workers are absent |
 | Worker PID/PGID | Supervisor memory | Validated before targeting the exact detached group |
 
 ## Failure semantics
 
 ```mermaid
 sequenceDiagram
-  participant TS as Temporal Server
+  participant TS as Temporal Service
   participant W1 as Worker 1
   participant E as External effect
   participant W2 as Worker 2
 
-  TS->>W1: Schedule Activity attempt 1
+  TS->>W1: Schedule Activity Task Execution 1
   W1->>E: Start Codex turn or test file
   W1-->>TS: Heartbeat checkpoint
   Note over W1: Process group is killed
-  TS->>W2: Retry Activity attempt 2
+  TS->>W2: Schedule Activity Task Execution 2
   W2->>TS: Load heartbeat details
   W2->>E: Resume thread or skip passed file
-  W2-->>TS: Record Activity completion
-  TS->>W2: Replay Workflow with recorded result
+  W2-->>TS: Report Activity result
+  TS->>TS: Record ActivityTaskCompleted event
+  TS->>W2: Replay Workflow code with recorded result
 ```
 
-If the external effect finished and Activity completion never reached Temporal, attempt 2 can repeat that effect. Application-level idempotency remains required for consequential effects.
+If the external effect finished but the Worker's completion report failed to reach the Temporal Service, the second Activity Task Execution can repeat that effect. Production code can prevent harmful duplicates with effect-specific idempotency or reconciliation.

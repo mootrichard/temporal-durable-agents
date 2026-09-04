@@ -1,6 +1,8 @@
 # Verification receipts
 
-Recorded on 2026-08-17 in the local macOS presentation environment.
+The authenticated live and manual run receipts were recorded on 2026-08-17 in
+the local macOS presentation environment. The automated evidence was
+revalidated on 2026-09-03.
 
 ## Authenticated live Codex path
 
@@ -39,11 +41,21 @@ The baseline sequence killed `baseline-1ad9804a` and its process group. Its rest
 
 ## Automated deterministic supervisor sequence
 
-The Playwright run generates fresh random run IDs. It kills Act I during investigation, verifies a zeroed restart response, then kills Act II during final verification with a visible partial test checkpoint. Replacement Workers finish at `4 / 4` with four completed Codex turns, zero Codex retries, and the one-line diff. The interrupted operation in this variant is the test Activity; the separate integration suite covers interrupted Codex resumption and exact file-checkpoint reuse.
+The Playwright run generates fresh random run IDs. It kills Act I during
+investigation and verifies a zeroed restart response. It then kills Act II
+during final verification with a visible partial test checkpoint. While the
+Worker is offline, it verifies page-refresh restoration, retained agent-console
+events, and Workflow-timeline spans from parent, child, and Activity Event
+Histories. Replacement Workers finish at `4 / 4` with four completed Codex
+turns and the one-line diff. The interrupted operation in this variant is the
+test Activity Execution; the integration suite separately covers interrupted
+Codex resumption and exact file-checkpoint reuse.
 
 Visual receipts:
 
 - [Baseline after process-group kill](../output/playwright/baseline-killed.png)
+- [Agent consoles following live work](../output/playwright/agent-consoles-live.png)
+- [Workflow timeline while compute is offline](../output/playwright/workflow-timeline-frozen.png)
 - [Temporal after Worker replacement](../output/playwright/temporal-recovered.png)
 
 ## Automated evidence
@@ -65,24 +77,34 @@ npm run build
 passed
 
 npm audit --audit-level=high
-found 0 vulnerabilities
+2 vulnerabilities (1 moderate, 1 high); exited with status 1
 ```
+
+The dependency audit reported a high-severity `fast-uri` advisory and a
+moderate-severity `qs` advisory. Both are transitive dependencies, and npm
+reports that fixes are available through `npm audit fix`.
 
 The Temporal integration tests start a real ephemeral server. They prove:
 
 - completed Child Workflow reuse while an interrupted Codex Activity retries;
 - production `runCodexTurn` restoration of the heartbeated thread ID;
-- file-level heartbeat restoration, with every test filename executed exactly once across Worker replacement;
-- accurate retry metrics when a Codex Activity exhausts all five attempts.
+- file-level heartbeat restoration, with every test filename executed exactly
+  once across Worker replacement;
+- accurate retry metrics when a Codex Activity Execution exhausts all five
+  Activity Task Execution attempts.
 
-The fixture tests also prove that replaying an implementation Activity accepts
-the exact fixed workspace state. The supervisor tests prove that a completed
-baseline process reports its fleet offline.
+The fixture tests also prove that replaying an implementation Activity
+Execution accepts the exact fixed workspace state. The supervisor tests prove
+that a completed baseline process reports its fleet offline.
 
 The Playwright tests start their own Temporal server and production API. They
 drive the presentation controls, invoke the real supervisor kill and restart
-endpoints, verify baseline reset, and wait for the recovered Temporal diff.
-They also verify page-refresh restoration and automatic Worker shutdown after a
-terminal Temporal result.
+endpoints, verify baseline reset, inspect the frozen agent consoles and
+Workflow timeline, and wait for the recovered Temporal diff. They also verify
+page-refresh restoration and automatic Worker shutdown after a terminal
+Temporal result.
 
-The Docker presentation path was not executed during this receipt because the local Docker daemon was stopped. The same Worker/API path was exercised against Temporal CLI development servers launched by the SDK test harness.
+The Docker presentation path and authenticated Live Codex path were not
+re-executed during the 2026-09-03 validation. The automated suites exercised
+the same production API, supervisor, Worker, Workflow, Activity, and UI code
+against ephemeral Temporal development servers.

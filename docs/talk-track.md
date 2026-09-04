@@ -8,17 +8,17 @@ Target length: 12 minutes. Keep the browser on the one-screen canvas. Keep Tempo
 
 Point to the four nodes. Explain that the task is intentionally plain: fix one retry-loop boundary in a frozen TypeScript repository. The simplicity isolates the orchestration behavior.
 
-> “The application is identical in both acts. The ownership of progress changes.”
+> “The bounded repair and tools are the same in both acts. The ownership of progress changes.”
 
 ## 1:15–3:30 — Act I: process tree
 
 Select **Baseline** and **Fixture**.
 
-> “The coordinator asks Codex for a structured plan with exactly two read-only investigations. Source, tests, and a local test subprocess run concurrently. The main Codex thread then resumes to write one fix.”
+> “The coordinator asks Codex for a structured plan with exactly two read-only investigations. The source investigator, test investigator, and local test subprocess run concurrently. The main Codex thread then resumes to write one fix.”
 
 Click **Start run**. Wait until the two investigations are running or complete.
 
-> “Right now the promises, thread mapping, and test checkpoint live in JavaScript memory. Git owns any bytes already written, but nothing durable owns what should happen next.”
+> “In the baseline, the promises, thread mapping, and test checkpoint live in JavaScript memory. Git owns any bytes already written, but nothing durable owns the next step.”
 
 Click **Kill workers**. In the **Stop every worker?** dialog, click
 **Stop workers**.
@@ -28,7 +28,7 @@ Click **Kill workers**. In the **Stop every worker?** dialog, click
 Click **Restart workers**. In **Run evidence**, point to zero Codex turns and
 zero retries.
 
-> “Restart means a fresh orchestration run and a reset fixture. The new process has no basis for distinguishing completed work from unfinished work.”
+> “Restart reuses the supervisor’s run label, but it starts a fresh orchestration process with a reset fixture and zero progress. The label is not a durable continuation.”
 
 ## 3:30–5:15 — Migration, not magic
 
@@ -36,26 +36,40 @@ Select **Temporal**.
 
 > “I moved only orchestration state into a Workflow. The two investigations are Child Workflows with durable identities. Codex calls, tests, Git, and filesystem access stay in Activities because those are external, nondeterministic effects.”
 
-Select **Coordinator** and point to its thread ID, attempt, and event receipts.
-Select **Test runner** and point to the **Test checkpoint** card.
+Point to **Agent consoles** and **Workflow timeline** after the run starts in
+Act II. Explain that the consoles reorganize the live trace by logical job,
+while the timeline derives execution spans from Temporal Event History.
 
-> “Temporal owns the plan and completion history. Codex session storage owns conversation continuity. Git owns code state. Activity heartbeats own resumable checkpoints. Each system has one clear responsibility.”
+> “The Temporal Service records the plan and completed results in Event History. Codex session storage holds conversation context. Git holds code state. The Temporal Service stores Activity heartbeat details as resumable checkpoints.”
 
 ## 5:15–8:15 — Act II: kill and recover
 
-Click **Start run**. Wait for **Investigating**, ideally until **Run evidence**
-shows one Codex turn.
+Click **Start run**. Wait for **Investigating** and for at least one thread
+receipt to appear.
 
-Click **Kill workers**. In the **Stop every worker?** dialog, click
-**Stop workers**.
+Select **Source investigator** and point to its thread ID and Activity Task
+Execution attempt number.
+Select **Test runner** and point to the **Test checkpoint** card.
 
-> “Every Worker and its subprocesses are gone. This frozen view is the API’s last successful Workflow query. Temporal is still holding the execution history.”
+Click **Kill workers** before the run completes. In the **Stop every worker?**
+dialog, click **Stop workers**.
 
-Pause for two seconds so the absence of compute is visible.
+> “The Worker and its subprocesses are gone. This frozen view is the API’s last successful Workflow Query. The Temporal Service still stores the Event History.”
+
+Click **Agent consoles**. Point to **Fleet offline** and the retained events,
+then close the dialog. Click **Workflow timeline**. Point to **Compute offline**
+and the recorded parent, Child Workflow, and Activity spans, then close the
+dialog.
+
+> “The snapshot is frozen because a Workflow Query needs Worker compute. The timeline remains available because the API reads Event History directly from the Temporal Service.”
 
 Click **Restart workers**.
 
-> “The replacement Worker replays history. Completed Child Workflows supply recorded results. An interrupted Codex Activity reads the heartbeated thread ID and resumes it. If that machine-local session vanished, it can create a replacement from the durable assignment and current worktree. Tests read their heartbeated filenames and skip passed files.”
+> “The replacement Worker replays Workflow code from Event History. Completed Child Workflows supply recorded results. During a retried Codex Activity Execution, the Activity code reads the heartbeated thread ID and resumes the thread. If that machine-local session vanished, the Activity code creates a replacement from the durable assignment and current Git workspace. During a retried test Activity Execution, the Activity code reads heartbeated filenames and skips passed files.”
+
+Click **Agent consoles** while the replacement Worker runs. Show that each pane
+replays the trace events already present in the run snapshot and then follows
+new events. Close the dialog.
 
 Wait for **Run complete**. Point in this order:
 
@@ -79,7 +93,7 @@ Workflow result. Point to **Start new run**.
 
 > “Worker failure is also different from Workflow cancellation or termination. Killing compute pauses this run. Explicitly terminating the Workflow ends it.”
 
-Mention the local boundary: Codex sessions and worktrees are on this machine; shared durable storage is the production follow-on for machine loss.
+Mention the local boundary: Codex sessions and Git workspaces are on this machine; shared durable storage is the production follow-on for machine loss.
 
 ## 10:15–12:00 — Developer-advocacy close
 
@@ -108,5 +122,8 @@ Then rehearse once in **Fixture**, refresh the page, select **Live Codex**, and 
 
 - If **Start run** reports a Temporal connection error, start the development server and rerun preflight.
 - If live mode reports a Codex authentication error, run `codex login` and confirm `codex login status`.
-- If the timing window passes and the run completes before the kill, start a fresh run; fixture delay can be raised with `FIXTURE_DELAY_MS`.
+- If the timing window passes and the run completes before the kill, start a
+  fresh run. Increase `FIXTURE_DELAY_MS` for longer model stages or
+  `TEST_FILE_DELAY_MS` for a longer file-by-file verification stage before
+  starting the API.
 - Keep machine-loss claims out of the demo. The demonstrated boundary is Worker-process loss on one machine.
