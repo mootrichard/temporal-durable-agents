@@ -1,67 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=1920, height=1080">
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js" integrity="sha384-sG0Hv1tP1lZCk9KQmrIbY/XNwi+OY84GQqhMscbnsoBFqAz8KNCil1kvfL3Hbbk2" crossorigin="anonymous"></script>
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      html,
-      body {
-        width: 1920px;
-        height: 1080px;
-        overflow: hidden;
-        background: #000;
-      }
-      #root {
-        position: relative;
-        width: 1920px;
-        height: 1080px;
-        overflow: hidden;
-        background: #0B1020;
-      }
-      .scene {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-      }
-    </style>
-  </head>
-  <body>
-    <div data-hf-id="hf-ch36" id="root" data-composition-id="main" data-start="0" data-duration="30" data-width="1920" data-height="1080">
-      <div data-hf-id="hf-1nt7" id="el-01-kill-every-worker" class="scene" data-composition-id="01-kill-every-worker" data-composition-src="compositions/frames/01-kill-every-worker.html" data-start="0" data-duration="2.2" data-track-index="0"></div>
-
-      <div data-hf-id="hf-4l7h" id="el-02-agent-execution-tree" class="scene" data-composition-id="02-agent-execution-tree" data-composition-src="compositions/frames/02-agent-execution-tree.html" data-start="2.2" data-duration="3.6" data-track-index="1"></div>
-
-      <div data-hf-id="hf-kqbq" id="el-03-process-memory-fails" class="scene" data-composition-id="03-process-memory-fails" data-composition-src="compositions/frames/03-process-memory-fails.html" data-start="5.8" data-duration="3.2" data-track-index="0"></div>
-
-      <div data-hf-id="hf-e0ss" id="el-04-temporal-architecture" class="scene" data-composition-id="04-temporal-architecture" data-composition-src="compositions/frames/04-temporal-architecture.html" data-start="9" data-duration="4.2" data-track-index="1"></div>
-
-      <div data-hf-id="hf-ahil" id="el-05-compute-disappears" class="scene" data-composition-id="05-compute-disappears" data-composition-src="compositions/frames/05-compute-disappears.html" data-start="13.2" data-duration="4.4" data-track-index="0"></div>
-
-      <div data-hf-id="hf-l5ny" id="el-06-replay-resumes" class="scene" data-composition-id="06-replay-resumes" data-composition-src="compositions/frames/06-replay-resumes.html" data-start="17.6" data-duration="4.4" data-track-index="1"></div>
-
-      <div data-hf-id="hf-2reh" id="el-07-same-execution-completes" class="scene" data-composition-id="07-same-execution-completes" data-composition-src="compositions/frames/07-same-execution-completes.html" data-start="22" data-duration="3.4" data-track-index="0"></div>
-
-      <div data-hf-id="hf-0zko" id="el-08-temporal-lockup" class="scene" data-composition-id="08-temporal-lockup" data-composition-src="compositions/frames/08-temporal-lockup.html" data-start="25.4" data-duration="4.6" data-track-index="1"></div>
-
-      <!-- BGM -->
-      <audio data-hf-id="hf-inuj" id="el-bgm" src="assets/bgm/track.wav" data-start="0" data-duration="30" data-track-index="11" data-volume="0.18" data-timeline-role="music"></audio>
-
-    </div>
-
-    <script>
-      window.__timelines = window.__timelines || {};
-      const tl = gsap.timeline({ paused: true });
-      // Hard cuts come from contiguous scene timing; each scene owns its
-      // opening acceleration and proof hold.
-      tl.to({}, { duration: 30 }, 0);
-      window.__timelines["main"] = tl;
-    </script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920, height=1080">
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js" integrity="sha384-sG0Hv1tP1lZCk9KQmrIbY/XNwi+OY84GQqhMscbnsoBFqAz8KNCil1kvfL3Hbbk2" crossorigin="anonymous"></script>
+  <style>*{margin:0;padding:0;box-sizing:border-box}html,body,#root{width:1920px;height:1080px;overflow:hidden;background:#f7f6f2}#root{position:relative}.scene{position:absolute;inset:0;width:100%;height:100%}#wipe{position:absolute;inset:-80px;z-index:100;pointer-events:none;background:#5c52d9;opacity:0}</style>
+</head>
+<body>
+  <div id="root" data-composition-id="main" data-start="0" data-duration="30" data-width="1920" data-height="1080">
+    <div id="el-01-kill-every-worker" class="scene" data-composition-id="01-kill-every-worker" data-composition-src="compositions/frames/01-kill-every-worker.html" data-start="0" data-duration="2.2" data-track-index="0" data-width="1920" data-height="1080"></div>
+    <div id="el-02-agent-execution-tree" class="scene" data-composition-id="02-agent-execution-tree" data-composition-src="compositions/frames/02-agent-execution-tree.html" data-start="2.2" data-duration="3.6" data-track-index="1" data-width="1920" data-height="1080"></div>
+    <div id="el-03-process-memory-fails" class="scene" data-composition-id="03-process-memory-fails" data-composition-src="compositions/frames/03-process-memory-fails.html" data-start="5.8" data-duration="3.2" data-track-index="0" data-width="1920" data-height="1080"></div>
+    <div id="el-04-temporal-architecture" class="scene" data-composition-id="04-temporal-architecture" data-composition-src="compositions/frames/04-temporal-architecture.html" data-start="9" data-duration="4.2" data-track-index="1" data-width="1920" data-height="1080"></div>
+    <div id="el-05-compute-disappears" class="scene" data-composition-id="05-compute-disappears" data-composition-src="compositions/frames/05-compute-disappears.html" data-start="13.2" data-duration="4.4" data-track-index="0" data-width="1920" data-height="1080"></div>
+    <div id="el-06-replay-resumes" class="scene" data-composition-id="06-replay-resumes" data-composition-src="compositions/frames/06-replay-resumes.html" data-start="17.6" data-duration="4.4" data-track-index="1" data-width="1920" data-height="1080"></div>
+    <div id="el-07-same-execution-completes" class="scene" data-composition-id="07-same-execution-completes" data-composition-src="compositions/frames/07-same-execution-completes.html" data-start="22" data-duration="3.4" data-track-index="0" data-width="1920" data-height="1080"></div>
+    <div id="el-08-temporal-lockup" class="scene" data-composition-id="08-temporal-lockup" data-composition-src="compositions/frames/08-temporal-lockup.html" data-start="25.4" data-duration="4.6" data-track-index="1" data-width="1920" data-height="1080"></div>
+    <div id="wipe" data-layout-ignore></div>
+    <audio id="el-bgm" src="assets/bgm/track.wav" data-start="0" data-duration="30" data-track-index="11" data-volume="0.18" data-timeline-role="music"></audio>
+  </div>
+  <script>window.__timelines=window.__timelines||{};const tl=gsap.timeline({paused:true});const wipe=document.querySelector('#wipe');[2.2,5.8,9,13.2,17.6,22,25.4].forEach((cut)=>{tl.set(wipe,{opacity:1,xPercent:-110},cut-.18).to(wipe,{xPercent:0,duration:.18,ease:'power4.in'},cut-.18).to(wipe,{xPercent:110,duration:.22,ease:'power4.out'},cut).set(wipe,{opacity:0,xPercent:-110},cut+.22)});tl.to({},{duration:30},0);window.__timelines.main=tl;</script>
+</body>
 </html>

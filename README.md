@@ -111,7 +111,7 @@ npx skills add mootrichard/temporal-durable-agents
 [baseline-screen]: output/playwright/baseline-killed.png
 [console-screen]: output/playwright/agent-consoles-live.png
 [recovery-screen]: output/playwright/temporal-recovered.png
-[short-video]: videos/temporal-durable-agents/renders/temporal-durable-agents-30s.mp4
+[short-video]: https://youtu.be/8rHIwNXtRLc
 [timeline-screen]: output/playwright/workflow-timeline-frozen.png
 [video-poster]: videos/temporal-durable-agents/renders/video-contact-sheet.jpg
 [walkthrough]: https://mootrichard.github.io/temporal-durable-agents/

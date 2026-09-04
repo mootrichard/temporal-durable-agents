@@ -1,27 +1,12 @@
 <template>
   <style>
-    @font-face{font-family:"Inter";font-weight:500;font-style:normal;font-display:block;src:url("assets/fonts/Inter-500.woff2") format("woff2")}
-    @font-face{font-family:"Noto Sans Mono";font-weight:800;font-style:normal;font-display:block;src:url("assets/fonts/NotoSansMono-800.woff2") format("woff2")}
-    #root{width:1920px;height:1080px;position:relative;overflow:hidden;color:#F8FAFC;font-family:"Inter",sans-serif}
-    #root *{box-sizing:border-box}.bg{position:absolute;inset:0;background:#0B1020}.content{position:absolute;inset:0;padding:64px 80px}
-    .top{display:flex;justify-content:space-between;align-items:center;font:800 20px/1 "Noto Sans Mono",monospace;letter-spacing:.12em;text-transform:uppercase;color:#92A4C3}.top img{width:170px;height:44px;object-fit:contain}
-    h1{margin:38px 0 0;font-size:104px;line-height:.96;font-weight:500;letter-spacing:-.05em}.sub{margin-top:18px;font-size:36px;color:#92A4C3}
-    .screen{position:absolute;left:80px;right:80px;top:310px;height:620px;border:1px solid rgba(248,250,252,.18);border-radius:12px;overflow:hidden;background:#11172A}.screen img{width:100%;height:100%;object-fit:cover;object-position:center}
-    .id{position:absolute;right:104px;bottom:112px;padding:13px 18px;border-radius:999px;background:#F8FAFC;color:#0B1020;font:800 16px/1 "Noto Sans Mono",monospace;letter-spacing:.03em}
+    @font-face{font-family:Inter;src:url("assets/fonts/Inter-500.woff2")}@font-face{font-family:Mono;src:url("assets/fonts/NotoSansMono-800.woff2")}
+    #root{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;background:#f7f6f2;color:#17171b;font-family:Inter,sans-serif}#root *{box-sizing:border-box}.grid{position:absolute;inset:0;background-image:linear-gradient(rgba(92,82,217,.065) 1px,transparent 1px),linear-gradient(90deg,rgba(92,82,217,.065) 1px,transparent 1px);background-size:72px 72px}.wash{position:absolute;width:820px;height:820px;right:-120px;top:110px;border-radius:50%;background:rgba(92,82,217,.08)}.content{position:absolute;inset:0;padding:74px 86px 66px;display:grid;grid-template-columns:1.16fr .84fr;gap:70px}.copy{display:flex;flex-direction:column;justify-content:center}.eyebrow{font:800 21px/1 Mono,monospace;letter-spacing:.13em;text-transform:uppercase;color:#5c52d9}.eyebrow:before{content:'✱ ';}.title{margin:40px 0 28px;font-size:126px;line-height:.94;letter-spacing:-.055em;font-weight:500}.accent{color:#5c52d9}.dek{font-size:35px;line-height:1.25;color:#55535d;max-width:760px}.orbit{position:relative;display:grid;place-items:center}.ring{position:absolute;border:2px solid rgba(92,82,217,.23);border-radius:50%}.r1{width:620px;height:620px}.r2{width:440px;height:440px;border-style:dashed}.core{width:300px;height:156px;border:3px solid #5c52d9;border-radius:24px;background:#fff;display:grid;place-items:center;font-size:32px;color:#4138aa;box-shadow:0 24px 70px rgba(57,44,150,.16)}.dot{position:absolute;width:30px;height:30px;border:7px solid #f7f6f2;border-radius:50%;background:#5c52d9;box-shadow:0 0 0 2px rgba(92,82,217,.25)}.d1{transform:translate(0,-310px)}.d2{transform:translate(310px,0)}.d3{transform:translate(-310px,0)}.d4{transform:translate(0,310px)}.footer{position:absolute;left:86px;right:86px;bottom:34px;padding-top:20px;border-top:2px solid #d8d5e8;display:flex;justify-content:space-between;font:800 18px/1 Mono,monospace;letter-spacing:.08em;text-transform:uppercase}.footer strong{color:#5c52d9}
   </style>
-  <div data-hf-id="hf-7u0d" id="root" data-composition-id="01-kill-every-worker" data-width="1920" data-height="1080" data-duration="2.2">
-    <div data-hf-id="hf-yxtr" id="f01-bg" class="clip bg" data-start="0" data-duration="2.2" data-track-index="0"></div>
-    <div data-hf-id="hf-2sd0" id="f01-content" class="clip content" data-start="0" data-duration="2.2" data-track-index="1">
-      <div data-hf-id="hf-sijt" class="top"><span data-hf-id="hf-wgt6">Durable agent execution · field test</span><img data-hf-id="hf-0k4r" src="assets/logo_001.svg" alt="Temporal"></div>
-      <h1 data-hf-id="hf-x4ad">Kill every worker.</h1><div data-hf-id="hf-8u2t" class="sub">The agent run keeps going.</div>
-      <div data-hf-id="hf-cdmk" class="screen"><img data-hf-id="hf-70q3" data-layout-allow-overflow src="assets/image_005.png" alt="Four-pane live agent console for the Temporal run"></div>
-      <div data-hf-id="hf-1ooo" class="id">WORKFLOW ID · temporal-a4873a7c</div>
-    </div>
+  <div id="root" data-composition-id="01-kill-every-worker" data-width="1920" data-height="1080" data-duration="2.2">
+    <div class="clip grid" data-start="0" data-duration="2.2" data-track-index="0"></div><div class="wash"></div>
+    <div class="clip content" data-start="0" data-duration="2.2" data-track-index="1"><div class="copy"><div class="eyebrow">Durable execution for agent trees</div><h1 class="title">The orchestrator died.<br><span class="accent">The work didn’t.</span></h1><p class="dek">Kill every Worker. Keep the same execution.</p></div><div class="orbit"><div class="ring r1"></div><div class="ring r2"></div><div class="dot d1"></div><div class="dot d2"></div><div class="dot d3"></div><div class="dot d4"></div><div class="core">Execution tree</div></div></div>
+    <div class="footer"><span>Failure test · <strong>SIGKILL</strong></span><span>Workflow ID survives</span></div>
   </div>
-  <script>
-    const tl=gsap.timeline({paused:true});
-    tl.fromTo(".content",{opacity:0,y:14},{opacity:1,y:0,duration:.52,ease:"power3.out"},0)
-      .fromTo(".screen img",{scale:1.015},{scale:1,duration:2.6,ease:"power1.out"},.18);
-    window.__timelines["01-kill-every-worker"]=tl;
-  </script>
+  <script>const tl=gsap.timeline({paused:true});tl.fromTo('.copy',{opacity:0,x:-70},{opacity:1,x:0,duration:.5,ease:'power4.out'},0).fromTo('.orbit',{opacity:0,scale:.82,rotation:-8},{opacity:1,scale:1,rotation:0,duration:.7,ease:'back.out(1.25)'},.06).fromTo('.footer',{scaleX:0,transformOrigin:'left center'},{scaleX:1,duration:.45,ease:'power3.out'},.25).to('.r2',{rotation:18,duration:1.8,ease:'none'},.35);window.__timelines['01-kill-every-worker']=tl;</script>
 </template>

@@ -1,53 +1,51 @@
 ---
-workflow: product-launch-video
+workflow: general-video
 flow: automation
 storyboard: yes
-message: "Temporal gives an agent execution tree durable identity, so replacement Workers can resume unfinished work without losing recorded progress."
+message: "A process executes an agent tree; Temporal owns its durable progress so replacement Workers can recover the same execution."
 destination: youtube-presentation
 aspect: 1920x1080
 language: en
-audience: temporal-technical-hiring-and-developer-advocacy
+audience: developers learning durable AI-agent orchestration
 length: 30s
-angle: cinematic-proof-then-architecture
+angle: project-model-then-live-proof
 narration: no
 ---
 
 ## Intent
 
-Create a high-quality 30-second showcase that sells Temporal on the durable agent
-orchestration demo built in this repository. Open with the live proof: kill every
-Worker and Codex/test subprocess, hold on the frozen execution tree, restart the
-fleet, and finish the same Workflow under the same Workflow ID. Then reveal the
-architecture that makes the recovery real: Event History, Child Workflows,
-Activities, heartbeats, replay, and replaceable compute.
+Create a punchy 30-second learning overview of this repository. Combine the
+slideshow's clear thesis and large editorial hierarchy with the explainer's
+concrete comparison, migration map, and recovery semantics. Do not compress the
+slideshow into video. Build a distinct sizzle arc around one question: who owns
+what happens next when the process disappears?
 
-The chosen concept is “The Orchestrator Died. The Work Didn’t.” The tone is
-focused, precise, and technically exact: Apple-like restraint with energy coming
-from decisive cuts, strong hierarchy, and real proof rather than layered motion.
+The story must establish the project before selling the result: one retry bug,
+one coordinator, two bounded investigations, and two implementations of the
+same agent protocol. Contrast process-owned continuation with Temporal-owned
+continuation, then prove recovery with the real Worker-loss capture, the same
+Workflow ID, four passing tests, and the one-line fix.
 
 ## Assets
 
-- https://temporal.io/brand — official Temporal brand assets and visual guidance; use the official logo in the opener and closing sting, and use the brand palette/type guidance as visual truth.
-- ../../output/playwright/temporal-recovered.png — recovered execution tree and completion receipt.
-- ../../output/playwright/baseline-killed.png — process-owned failure state.
-- ../../output/playwright/agent-consoles-live.png — four-pane live agent console.
-- ../../output/playwright/workflow-timeline-frozen.png — Workflow timeline while the Worker fleet is offline.
-- ../../output/playwright/slideshow-code-trace-replay.png — existing replay/code-trace visual.
-- ../../docs/architecture.md — architecture, state ownership, and failure semantics.
-- ../../docs/presentation-outline.md — source narrative and Temporal primitive mapping.
-- ../../docs/talk-track.md — source phrasing and honest guarantee boundary.
+- `assets/image_006.png` — real Workflow timeline while the Worker fleet is offline.
+- `assets/image_001.png` — real recovered execution tree and completion receipt.
+- `../../explainer/` — source for the two execution models, migration map, replay semantics, heartbeat role, and guarantee boundary.
+- `../../slideshow/` — source for the opening thesis, agent-tree model, shared bug, and teaching sequence.
+- `../../docs/architecture.md` — responsibility boundaries and state ownership.
 
-## Customizations
+## Direction
 
-- Feature captured application screens as primary evidence, not decorative mockups.
-- Let one persistent Workflow ID act as the visual thread through failure and recovery.
-- Drive the cut with the existing music bed. Use decisive scene changes and one focal motion per shot. No narration or synthetic sound-effect hits.
-- Keep every frame calm enough to parse instantly: the composition arrives as one unit, one proof detail receives emphasis, then the cut moves on.
-- Do not add styled captions to this master.
-- Review the plan, wireframe sketches, and finished piece on the live storyboard board.
+- Use a warm editorial light canvas for explanation and dark proof wells for failure states.
+- Keep Temporal violet as the single connective accent. Use coral only for the baseline failure beat.
+- Set large, sentence-case headlines. Use mono labels for state, identity, and receipts.
+- Show the project model with designed diagrams; show recovery with real application captures.
+- Use decisive full-frame violet wipes between scenes. Within scenes, animate hierarchy in 2–4 coordinated moves.
+- Keep every claim readable without narration. Do not add captions or synthetic sound effects.
 
-## Notes
+## Guarantee boundary
 
-- Avoid generic AI imagery, glowing brains, stock cloud graphics, and ungrounded durability claims.
-- The 30-second limit keeps every proof beat decisive while preserving the guarantee boundary.
-- Unnarrated 16:9 master for YouTube, presentation playback, and a project page.
+The demo proves recovery from Worker-process loss. Event History preserves
+orchestration progress; heartbeats preserve retry hints. External side effects
+still require application-level idempotency. Do not imply host- or disk-loss
+recovery for the local Codex sessions and run worktrees.
