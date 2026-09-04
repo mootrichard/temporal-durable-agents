@@ -179,10 +179,11 @@ Temporal Developer skill and remain visibly separate from that catalog.
 
 ## Agent integration
 
-The [agent usage guide](./agent-usage.md) turns this taxonomy into a retrieval layer.
-It normalizes ambiguous terms, identifies the Workflow/Activity/external-effect
-boundary, and then routes the agent to the smallest relevant bundle of upstream core
-and SDK references. The [skill review](./temporal-developer-skill-review.md) records
+The [`temporal-vocabulary`](../skills/temporal-vocabulary/SKILL.md) skill turns this
+taxonomy into a retrieval layer. It normalizes ambiguous terms, identifies the
+Workflow/Activity/external-effect boundary, and then routes the agent to the smallest
+relevant bundle of upstream core and SDK references listed in the
+[agent usage guide](./agent-usage.md). The [skill review](./temporal-developer-skill-review.md) records
 the comparison and the upstream guidance that needs refinement before reuse.
 
 ## Boundaries and pending extensions

@@ -95,6 +95,19 @@ Event History.
 - [Verification receipts](docs/verification.md)
 - [Temporal concept map](ontology/README.md)
 
+## For agents
+
+[`AGENTS.md`](AGENTS.md) is the entry point. The reusable learnings live in
+[`skills/`](skills/) as Agent Skills: the durable-agent-tree design recipe, the
+Temporal vocabulary router, and this repo's run, verify, and doc-sync loops.
+Install them into any agent with:
+
+```bash
+npx skills add mootrichard/temporal-durable-agents
+```
+
+[`llms.txt`](llms.txt) indexes every document for retrieval.
+
 [baseline-screen]: output/playwright/baseline-killed.png
 [console-screen]: output/playwright/agent-consoles-live.png
 [recovery-screen]: output/playwright/temporal-recovered.png

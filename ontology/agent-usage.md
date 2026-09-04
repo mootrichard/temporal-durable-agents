@@ -1,9 +1,12 @@
 # Agent use of the Temporal ontology
 
-Use this guide when an agent explains, designs, implements, debugs, tests, or operates
-Temporal code in this repository. The ontology supplies precise language and
-relationships. The upstream Temporal Developer skill supplies procedures, commands,
-SDK examples, and troubleshooting flows.
+The [`temporal-vocabulary`](../skills/temporal-vocabulary/SKILL.md) skill carries the
+routing workflow and normalization rules an agent follows when it explains, designs,
+implements, debugs, tests, or operates Temporal code. This file holds the data that
+workflow consumes: the authority order, the pinned reference-routing table, and the
+plugin shape. The ontology supplies precise language and relationships; the upstream
+Temporal Developer skill supplies procedures, commands, SDK examples, and
+troubleshooting flows.
 
 ## Authority order
 
@@ -19,28 +22,6 @@ Use sources in this order when they disagree:
 Treat release stages, minimum versions, CLI flags, and SDK APIs as version-sensitive
 facts. Verify them against current official documentation before changing code or
 giving operational instructions.
-
-## Routing workflow
-
-1. **Classify the task.** Choose one primary intent: explain, design, implement,
-   debug, test, or operate. Identify the SDK language when code is involved.
-2. **Normalize the terms.** Resolve “Workflow,” “Activity,” “Worker,” “Cluster,”
-   “Activity Implementation,” and “Side Effect” through `taxonomy.md` or the
-   `AmbiguousTerm` individuals in `temporal.ttl`.
-3. **Locate the execution boundary.** State which code belongs to a Workflow
-   Definition, which belongs to an Activity Definition, which process executes it,
-   where Event History lives, and which external effects remain application-owned.
-4. **Load the smallest reference bundle.** Use the routing table below. For code,
-   load the upstream language overview first and then only the topic references
-   required by the task.
-5. **Apply project language.** Map Temporal concepts to the demo vocabulary in
-   `docs/architecture.md` after the platform concepts are clear. Keep both the
-   Temporal and demo names visible when teaching the mapping.
-6. **Separate the answer.** Label or clearly distinguish Temporal facts, project
-   design rules, and version-sensitive operational guidance.
-7. **Verify completion.** Every changed Temporal concept has a source; every code
-   path respects replay boundaries; every external effect has a stable idempotency
-   strategy; and every operational claim has a current version check.
 
 ## Reference routing
 
@@ -58,23 +39,6 @@ newer operational guidance when freshness matters.
 | AI Application Pattern | [AI patterns](https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/core/ai-patterns.md) | Language AI reference and current integration docs |
 | TypeScript implementation | [TypeScript overview](https://github.com/temporalio/skill-temporal-developer/blob/4f7b14626c56d06574564cd4d265bbcb6425a21c/references/typescript/typescript.md) | The topic-specific TypeScript reference |
 
-## Normalization rules
-
-- **Temporal Service** is canonical. Treat **Temporal Cluster** as a deprecated
-  convenience term.
-- **Activity Definition** is canonical for the registered code concept. Treat
-  **Activity Implementation** as skill shorthand.
-- **Workflow replay** re-executes Workflow code and reuses recorded Activity results.
-  Activity retries can create multiple Activity Task Executions; replay does not
-  rerun a completed Activity implementation.
-- **Stable idempotency keys** preserve the same identity across retries. Attempt
-  numbers belong in diagnostics, not in a retry-deduplication key.
-- **Activity code** may perform non-deterministic operations and external effects.
-  This placement permission does not make every Activity Definition inherently
-  non-deterministic.
-- **Side Effect** has two meanings in common prose. Name either the recorded Temporal
-  Side Effect mechanism or the external effect explicitly.
-
 ## Plugin shape
 
 The official repository already publishes an
@@ -82,7 +46,7 @@ The official repository already publishes an
 A project plugin should extend or synchronize with that upstream skill and add four
 project layers:
 
-1. a compact skill entrypoint using the routing workflow above;
+1. the `temporal-vocabulary` skill as the compact entrypoint;
 2. the ontology plus a small term-and-reference query tool;
 3. optional SHACL rules for closed-world code and configuration checks;
 4. the Chaos City alignment and TypeScript-specific project guidance.

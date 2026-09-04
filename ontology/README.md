@@ -15,8 +15,9 @@ APIs, and production configuration values in separate layers.
   modeling boundaries.
 - [`temporal.ttl`](./temporal.ttl) is the machine-readable OWL ontology in Turtle.
 - [`sources.md`](./sources.md) records source scope and provenance.
-- [`agent-usage.md`](./agent-usage.md) routes agents from normalized concepts to the
-  relevant operational and SDK references.
+- [`agent-usage.md`](./agent-usage.md) records the authority order and the pinned
+  reference-routing table; the [`temporal-vocabulary`](../skills/temporal-vocabulary/SKILL.md)
+  skill is the procedure that consumes them.
 - [`temporal-developer-skill-review.md`](./temporal-developer-skill-review.md) records
   the source audit and enhancement rationale.
 

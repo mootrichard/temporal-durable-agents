@@ -1,0 +1,38 @@
+# The Orchestrator Died. The Work Continued
+
+> The same four-node AI agent code-repair tree, run process-owned and Temporal-owned. Kill every Worker; the Temporal run replays from Event History and finishes. A TypeScript demo plus the design recipe, Temporal ontology, explainer, talk track, and proofs.
+
+Thesis: a process is where the work executes; a durable execution is what the work means, what has completed, and what must happen next. Temporal owns orchestration recovery; the application owns idempotency, artifacts, model correctness, and safe external effects.
+
+## Agent skills
+
+Install with `npx skills add mootrichard/temporal-durable-agents`.
+
+- [durable-agent-tree](https://github.com/mootrichard/temporal-durable-agents/blob/main/skills/durable-agent-tree/SKILL.md): design or migrate an agent execution tree onto Temporal; Workflow vs Child Workflow vs Activity placement, heartbeat checkpoints, the at-least-once boundary, kill-based proofs.
+- [temporal-vocabulary](https://github.com/mootrichard/temporal-durable-agents/blob/main/skills/temporal-vocabulary/SKILL.md): normalize Temporal terms and route to the smallest correct reference.
+- [durable-agent-demo](https://github.com/mootrichard/temporal-durable-agents/blob/main/skills/durable-agent-demo/SKILL.md): run, change, and verify this demo.
+- [narrative-sync](https://github.com/mootrichard/temporal-durable-agents/blob/main/skills/narrative-sync/SKILL.md): realign docs, explainer, slideshow, and video after source changes.
+
+## Docs
+
+- [How the durable agent tree works](https://github.com/mootrichard/temporal-durable-agents/blob/main/docs/how-it-works.md): full sequence, recovery, guarantee boundary, source map.
+- [Architecture and state ownership](https://github.com/mootrichard/temporal-durable-agents/blob/main/docs/architecture.md): topology, execution tree, state ledger, failure semantics.
+- [Talk track](https://github.com/mootrichard/temporal-durable-agents/blob/main/docs/talk-track.md): 12-minute script with exact demo steps.
+- [Verification receipts](https://github.com/mootrichard/temporal-durable-agents/blob/main/docs/verification.md): what the tests and browser proofs establish.
+- [Spec](https://github.com/mootrichard/temporal-durable-agents/blob/main/docs/spec.md): objective, scenario, acceptance criteria.
+- [Interactive explainer](https://mootrichard.github.io/temporal-durable-agents/): code-traced walkthrough of both orchestrations.
+
+## Temporal ontology
+
+- [Ontology README](https://github.com/mootrichard/temporal-durable-agents/blob/main/ontology/README.md): scope, modeling approach, validation results.
+- [Taxonomy](https://github.com/mootrichard/temporal-durable-agents/blob/main/ontology/taxonomy.md): concept tree, precise-language table, design-pattern catalog.
+- [temporal.ttl](https://github.com/mootrichard/temporal-durable-agents/blob/main/ontology/temporal.ttl): OWL 2 DL model in Turtle, 120 classes, 53 individuals.
+- [Agent usage](https://github.com/mootrichard/temporal-durable-agents/blob/main/ontology/agent-usage.md): authority order and pinned reference routing.
+
+## Source
+
+- [src/temporal/workflows.ts](https://github.com/mootrichard/temporal-durable-agents/blob/main/src/temporal/workflows.ts): FixWorkflow and SubagentWorkflow.
+- [src/temporal/activities.ts](https://github.com/mootrichard/temporal-durable-agents/blob/main/src/temporal/activities.ts): heartbeating Codex and test Activities.
+- [src/baseline/orchestrator.ts](https://github.com/mootrichard/temporal-durable-agents/blob/main/src/baseline/orchestrator.ts): the process-owned counterpart.
+- [src/supervisor/fleet-supervisor.ts](https://github.com/mootrichard/temporal-durable-agents/blob/main/src/supervisor/fleet-supervisor.ts): process-group lifecycle and heartbeat projection.
+- [tests/temporal-recovery.integration.test.ts](https://github.com/mootrichard/temporal-durable-agents/blob/main/tests/temporal-recovery.integration.test.ts): Worker-replacement proofs against a real Temporal server.
